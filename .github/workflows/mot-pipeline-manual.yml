@@ -47,7 +47,7 @@ jobs:
 
     steps:
       - name: Checkout (sparse)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           sparse-checkout: |
             skills/mot-paper-pipeline
@@ -55,7 +55,7 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -128,8 +128,9 @@ jobs:
 
       - name: Upload runtime artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: mot-pipeline-runtime-manual
+          if-no-files-found: ignore
           path: |
             skills/mot-paper-pipeline/memory/
