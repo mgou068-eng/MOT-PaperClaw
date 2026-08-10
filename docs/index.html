@@ -1,0 +1,2392 @@
+<!doctype html>
+<html lang="zh-CN" data-repo="">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MOT-PaperClaw</title>
+    <style>
+      :root {
+        --bg: #f3f5f7;
+        --panel: #ffffff;
+        --line: #d9dee5;
+        --text: #17212b;
+        --muted: #5f6b76;
+        --accent: #c83e3a;
+        --accent-soft: rgba(200, 62, 58, 0.1);
+        --teal: #16857b;
+        --shadow: 0 12px 28px rgba(23, 33, 43, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, "Noto Sans SC", "Segoe UI", sans-serif;
+        color: var(--text);
+        overflow-x: hidden;
+        background: var(--bg);
+      }
+
+      .shell {
+        max-width: 1360px;
+        margin: 0 auto;
+        padding: 32px 20px 48px;
+      }
+
+      .hero {
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: center;
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: 2.8rem;
+        line-height: 1;
+        letter-spacing: 0;
+      }
+
+      .hero-copy {
+        min-width: 0;
+      }
+
+      .hero-title-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 0;
+      }
+
+      .hero-brand {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+      }
+
+      .mot-mark {
+        position: relative;
+        flex: 0 0 auto;
+        width: 68px;
+        height: 68px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fafb;
+        overflow: hidden;
+      }
+
+      .mot-box {
+        position: absolute;
+        width: 17px;
+        height: 23px;
+        border: 2px solid var(--accent);
+        border-radius: 2px;
+      }
+
+      .mot-box.one {
+        left: 10px;
+        top: 29px;
+      }
+
+      .mot-box.two {
+        left: 28px;
+        top: 17px;
+        border-color: var(--teal);
+      }
+
+      .mot-box.three {
+        right: 7px;
+        top: 8px;
+        width: 14px;
+        height: 19px;
+      }
+
+      .mot-track {
+        position: absolute;
+        left: 16px;
+        top: 20px;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 12px -5px 0 var(--accent), 24px -9px 0 var(--teal), 36px -13px 0 var(--teal);
+      }
+
+      .hero-copy p {
+        margin: 12px 0 0;
+        max-width: 720px;
+        color: var(--muted);
+        font-size: 1rem;
+        line-height: 1.65;
+      }
+
+      .repo-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fafb;
+        color: var(--text);
+        text-decoration: none;
+        box-shadow: none;
+      }
+
+      .repo-link:hover {
+        border-color: rgba(200, 62, 58, 0.42);
+        color: var(--accent);
+      }
+
+      .repo-meta {
+        display: grid;
+        gap: 2px;
+      }
+
+      .repo-meta strong {
+        font-size: 1rem;
+      }
+
+      .repo-meta span {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 20px;
+        margin-top: 20px;
+        min-width: 0;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        min-width: 0;
+      }
+
+      .sidebar {
+        padding: 18px;
+        position: sticky;
+        top: 20px;
+        align-self: start;
+        min-width: 0;
+        max-height: calc(100vh - 40px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .sidebar h2,
+      .content h2 {
+        margin: 0 0 14px;
+        font-size: 1rem;
+        letter-spacing: 0;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .summary {
+        margin: 0 0 14px;
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.5;
+      }
+
+      .report-list {
+        display: grid;
+        gap: 10px;
+        min-width: 0;
+        overflow-y: auto;
+        padding-top: 2px;
+        padding-right: 4px;
+      }
+
+      .report-item {
+        appearance: none;
+        width: 100%;
+        font: inherit;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #ffffff;
+        color: var(--text);
+        cursor: pointer;
+        transition: transform 160ms ease, border-color 160ms ease,
+          background 160ms ease;
+      }
+
+      .report-item:hover {
+        transform: translateY(-1px);
+      }
+
+      .report-item:hover,
+      .report-item.active {
+        border-color: rgba(200, 62, 58, 0.4);
+        background: #fff6f5;
+      }
+
+      .report-item strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 1rem;
+      }
+
+      .report-item span {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .report-item.more {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        text-decoration: none;
+        text-align: center;
+      }
+
+      .content {
+        padding: 22px;
+        min-width: 0;
+      }
+
+      .report-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: start;
+        margin-bottom: 18px;
+      }
+
+      .report-head h3 {
+        margin: 0;
+        font-size: 2rem;
+      }
+
+      .report-head a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .stat {
+        padding: 14px 16px;
+        border-radius: 6px;
+        background: var(--accent-soft);
+      }
+
+      .stat strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 1.4rem;
+      }
+
+      .section {
+        margin-bottom: 20px;
+      }
+
+      .section p {
+        margin: 0 0 10px;
+        color: var(--text);
+        line-height: 1.7;
+      }
+
+      .highlights {
+        margin: 0;
+        padding-left: 20px;
+        color: var(--text);
+        line-height: 1.7;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border-radius: 6px;
+        background: #ffffff;
+      }
+
+      .table-wrap {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .table-wrap table {
+        width: 100%;
+        min-width: 0;
+        table-layout: fixed;
+      }
+
+      .papers-mobile {
+        display: none;
+      }
+
+      .paper-card {
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #ffffff;
+      }
+
+      .paper-card + .paper-card {
+        margin-top: 12px;
+      }
+
+      .paper-card-row + .paper-card-row {
+        margin-top: 10px;
+      }
+
+      .paper-card-label {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 0.82rem;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .paper-card-value {
+        line-height: 1.65;
+      }
+
+      th,
+      td {
+        padding: 12px 14px;
+        text-align: left;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+        font-size: 0.95rem;
+        overflow-wrap: anywhere;
+      }
+
+      th {
+        background: #f3f5f7;
+      }
+
+      .col-title {
+        width: 32%;
+        min-width: 0;
+      }
+
+      .col-authors {
+        width: 23%;
+        min-width: 0;
+      }
+
+      .col-institution {
+        width: 15%;
+        min-width: 140px;
+        max-width: 180px;
+      }
+
+      .col-summary {
+        width: 30%;
+        min-width: 0;
+      }
+
+      .paper-col-institution,
+      .paper-card-value.institution {
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.55;
+      }
+
+      .institution-text {
+        display: -webkit-box;
+        white-space: normal;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 4;
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      .empty,
+      .status {
+        padding: 24px;
+        border-radius: 6px;
+        background: #ffffff;
+        color: var(--muted);
+      }
+
+      .paper-row {
+        cursor: pointer;
+        transition: background 160ms ease, transform 160ms ease;
+      }
+
+      .paper-row:hover {
+        background: #fff6f5;
+      }
+
+      .paper-title {
+        display: grid;
+        gap: 6px;
+      }
+
+      .paper-title strong {
+        font-size: 0.98rem;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+      }
+
+      .paper-hint {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        padding: 4px 9px;
+        border-radius: 999px;
+        background: rgba(181, 95, 52, 0.1);
+        color: var(--accent);
+        font-size: 0.78rem;
+        letter-spacing: 0;
+      }
+
+      .paper-card.clickable {
+        cursor: pointer;
+        transition: transform 160ms ease, border-color 160ms ease,
+          background 160ms ease;
+      }
+
+      .paper-card.clickable:hover {
+        transform: translateY(-1px);
+        border-color: rgba(200, 62, 58, 0.34);
+        background: #fff6f5;
+      }
+
+      .overlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        z-index: 40;
+      }
+
+      .overlay.open {
+        display: block;
+      }
+
+      .overlay-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(23, 33, 43, 0.52);
+      }
+
+      .detail-sheet {
+        position: absolute;
+        inset: 18px;
+        overflow: auto;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 8px;
+        background: #f3f5f7;
+        box-shadow: 0 32px 80px rgba(26, 18, 10, 0.28);
+      }
+
+      .detail-inner {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 24px 22px 40px;
+      }
+
+      .detail-topbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+
+      .back-button,
+      .ghost-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        border-radius: 6px;
+        border: 1px solid var(--line);
+        background: #ffffff;
+        color: var(--text);
+        font: inherit;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .back-button:hover,
+      .ghost-link:hover {
+        border-color: rgba(200, 62, 58, 0.35);
+        color: var(--accent);
+      }
+
+      .detail-hero {
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        box-shadow: var(--shadow);
+      }
+
+      .detail-kicker {
+        margin: 0 0 10px;
+        color: var(--muted);
+        font-size: 0.92rem;
+        text-transform: uppercase;
+        letter-spacing: 0;
+      }
+
+      .detail-title {
+        margin: 0;
+        font-size: 2.4rem;
+        line-height: 1.02;
+        letter-spacing: 0;
+      }
+
+      .detail-subtitle {
+        margin: 14px 0 0;
+        max-width: 900px;
+        color: var(--muted);
+        line-height: 1.75;
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: rgba(181, 95, 52, 0.1);
+        color: var(--accent);
+        font-size: 0.9rem;
+      }
+
+      .detail-hero .tag-row {
+        justify-content: center;
+      }
+
+      .detail-hero .tag-row a {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(200, 62, 58, 0.18);
+        background: rgba(200, 62, 58, 0.08);
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 0.94rem;
+      }
+
+      .detail-hero .tag-row a:hover {
+        border-color: rgba(200, 62, 58, 0.38);
+        background: rgba(200, 62, 58, 0.12);
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        margin-top: 18px;
+      }
+
+      .detail-card {
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        box-shadow: var(--shadow);
+      }
+
+      .detail-card h4 {
+        margin: 0 0 12px;
+        font-size: 0.98rem;
+        letter-spacing: 0;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .meta-grid {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 14px;
+      }
+
+      .meta-row {
+        display: block;
+        flex: 0 1 320px;
+        width: min(100%, 320px);
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #f8fafb;
+        align-items: start;
+        min-height: 100%;
+      }
+
+      .meta-row strong {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 0.92rem;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .meta-row div {
+        line-height: 1.7;
+      }
+
+      .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+      }
+
+      .preview-card {
+        overflow: hidden;
+        border-radius: 6px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .preview-card img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .preview-card span {
+        display: block;
+        padding: 10px 12px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .analysis-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .abstract-card {
+        margin-top: 18px;
+      }
+
+      .abstract-text {
+        margin: 0;
+        line-height: 1.8;
+        color: var(--text);
+      }
+
+      .analysis-item {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .analysis-item h5 {
+        margin: 0 0 12px;
+        font-size: 1.02rem;
+      }
+
+      .analysis-conclusion {
+        margin: 0 0 12px;
+        padding: 14px 16px;
+        border-radius: 6px;
+        background: rgba(200, 62, 58, 0.08);
+        line-height: 1.75;
+      }
+
+      .analysis-points {
+        display: grid;
+        gap: 8px;
+        width: min(100%, 760px);
+        margin: 0 auto;
+        justify-items: start;
+      }
+
+      .analysis-line {
+        margin: 0;
+        width: 100%;
+        line-height: 1.7;
+        text-align: left;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .analysis-line.bullet {
+        padding-left: 16px;
+        position: relative;
+      }
+
+      .analysis-line.bullet::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0.75em;
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--accent);
+      }
+
+      .analysis-line.indent-1 {
+        padding-left: 28px;
+      }
+
+      .analysis-line.indent-2 {
+        padding-left: 40px;
+      }
+
+      .detail-loading {
+        padding: 56px 20px;
+        text-align: center;
+        color: var(--muted);
+      }
+
+      .detail-error {
+        padding: 24px;
+        border-radius: 8px;
+        background: rgba(255, 245, 240, 0.94);
+        color: #8b4a2d;
+      }
+
+      .scroll-top-button {
+        position: fixed;
+        right: 34px;
+        bottom: 30px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        border: 1px solid rgba(200, 62, 58, 0.22);
+        border-radius: 6px;
+        background: #ffffff;
+        color: var(--accent);
+        font: inherit;
+        box-shadow: 0 18px 36px rgba(48, 34, 22, 0.14);
+        cursor: pointer;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(10px);
+        transition: opacity 180ms ease, transform 180ms ease,
+          border-color 180ms ease, background 180ms ease;
+        z-index: 41;
+      }
+
+      .scroll-top-button.visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+      }
+
+      .scroll-top-button:hover {
+        border-color: rgba(200, 62, 58, 0.4);
+        background: #fff6f5;
+      }
+
+      @media (max-width: 900px) {
+        .shell {
+          padding: 20px 14px 32px;
+        }
+
+        .layout {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+
+        .sidebar {
+          position: static;
+          padding: 16px;
+          order: 1;
+        }
+
+        .stats {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          flex-direction: column;
+          align-items: stretch;
+          padding: 22px 18px;
+          gap: 16px;
+        }
+
+        .hero-brand {
+          width: 100%;
+        }
+
+        .mot-mark {
+          width: 60px;
+          height: 60px;
+        }
+
+        .repo-link {
+          width: 100%;
+          justify-content: center;
+        }
+
+        .report-head {
+          flex-direction: column;
+        }
+
+        .content {
+          padding: 18px;
+          order: 2;
+        }
+
+        .detail-sheet {
+          inset: 0;
+          border-radius: 0;
+        }
+
+        .detail-inner {
+          padding: 18px 14px 28px;
+        }
+
+        .detail-topbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .scroll-top-button {
+          right: 18px;
+          bottom: 18px;
+        }
+      }
+
+      @media (max-width: 680px) {
+        .layout {
+          gap: 14px;
+        }
+
+        .sidebar,
+        .content {
+          width: 100%;
+        }
+
+        .sidebar {
+          padding: 14px;
+          max-height: none;
+          overflow: visible;
+          display: block;
+        }
+
+        .content {
+          padding: 16px 14px;
+        }
+
+        .sidebar h2,
+        .content h2 {
+          margin-bottom: 10px;
+        }
+
+        .hero h1 {
+          font-size: 2.2rem;
+        }
+
+        .hero-brand {
+          width: 100%;
+        }
+
+        .hero-title-row {
+          gap: 12px;
+        }
+
+        .hero-copy p {
+          font-size: 0.95rem;
+          line-height: 1.55;
+        }
+
+        .panel,
+        .hero {
+          border-radius: 8px;
+        }
+
+        .report-list {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          overflow: visible;
+          margin: 0;
+          padding: 0;
+          gap: 8px;
+        }
+
+        .report-item {
+          padding: 10px 8px;
+          min-height: 68px;
+          width: 100%;
+        }
+
+        .report-item strong {
+          margin-bottom: 2px;
+          font-size: 0.88rem;
+        }
+
+        .report-item span {
+          display: block;
+          font-size: 0.76rem;
+          line-height: 1.35;
+        }
+
+        .summary {
+          margin-bottom: 10px;
+        }
+
+        .report-head {
+          margin-bottom: 14px;
+        }
+
+        .report-head h3 {
+          font-size: 1.9rem;
+        }
+
+        .report-head a {
+          align-self: flex-start;
+        }
+
+        .stats {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .stat {
+          padding: 12px 10px;
+          text-align: center;
+        }
+
+        .stat strong {
+          font-size: 1.15rem;
+        }
+
+        th,
+        td {
+          padding: 10px 12px;
+          font-size: 0.9rem;
+        }
+
+        .table-wrap {
+          display: none;
+        }
+
+        .papers-mobile {
+          display: block;
+        }
+
+        .detail-topbar {
+          position: sticky;
+          top: 0;
+          z-index: 2;
+          padding-bottom: 8px;
+          background: rgba(243, 245, 247, 0.96);
+        }
+
+        .detail-hero,
+        .detail-card,
+        .analysis-item {
+          padding: 16px;
+          border-radius: 8px;
+        }
+
+        .detail-title {
+          font-size: 1.8rem;
+          line-height: 1.08;
+        }
+
+        .detail-subtitle {
+          font-size: 0.95rem;
+          line-height: 1.65;
+        }
+
+        .detail-hero .tag-row {
+          gap: 8px;
+        }
+
+        .detail-hero .tag-row a,
+        .chip,
+        .back-button,
+        .ghost-link {
+          font-size: 0.9rem;
+        }
+
+        .meta-row {
+          width: 100%;
+          flex-basis: 100%;
+        }
+
+        .preview-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .analysis-item h5 {
+          font-size: 0.98rem;
+        }
+
+        .analysis-conclusion {
+          padding: 12px 14px;
+        }
+
+        .analysis-points {
+          width: 100%;
+        }
+
+        .analysis-item,
+        .analysis-conclusion,
+        .analysis-points {
+          max-width: 100%;
+        }
+
+        .analysis-line.indent-1 {
+          padding-left: 22px;
+        }
+
+        .analysis-line.indent-2 {
+          padding-left: 30px;
+        }
+
+        .scroll-top-button {
+          right: 14px;
+          bottom: 14px;
+          padding: 10px 14px;
+          font-size: 0.9rem;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .shell {
+          padding: 16px 10px 26px;
+        }
+
+        .report-list {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .hero,
+        .sidebar,
+        .content {
+          border-radius: 8px;
+        }
+
+        .hero-brand {
+          width: 100%;
+        }
+
+        .mot-mark {
+          width: 52px;
+          height: 52px;
+        }
+
+        .layout {
+          gap: 12px;
+        }
+
+        .sidebar {
+          padding: 12px;
+        }
+
+        .content {
+          padding: 14px 12px;
+        }
+
+        .report-item {
+          min-height: 64px;
+          padding: 9px 7px;
+        }
+
+        .report-item strong {
+          font-size: 0.82rem;
+        }
+
+        .report-item span {
+          font-size: 0.72rem;
+        }
+
+        .stats {
+          grid-template-columns: 1fr;
+        }
+
+        .stat {
+          text-align: left;
+          padding: 12px 14px;
+        }
+
+        .section {
+          margin-bottom: 16px;
+        }
+      }
+
+      .site-footer {
+        margin-top: 24px;
+        text-align: center;
+      }
+
+      .footer-divider {
+        border: none;
+        border-top: 1px solid var(--line);
+        margin: 0 0 16px;
+      }
+
+      .footer-counter {
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin: 0;
+        line-height: 1.6;
+      }
+
+      .footer-dot {
+        margin: 0 10px;
+        color: var(--line);
+      }
+
+      #busuanzi_container_site_pv,
+      #busuanzi_container_site_uv {
+        display: inline;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div class="hero-brand">
+          <div class="hero-copy">
+            <div class="hero-title-row">
+              <h1>MOT-PaperClaw</h1>
+              <div class="mot-mark" aria-hidden="true">
+                <span class="mot-track"></span>
+                <span class="mot-box one"></span>
+                <span class="mot-box two"></span>
+                <span class="mot-box three"></span>
+              </div>
+            </div>
+            <p>
+              Multi-object tracking papers, filtered and analyzed every day.
+            </p>
+          </div>
+        </div>
+        <a
+          id="repoLink"
+          class="repo-link"
+          href="#"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <div class="repo-meta">
+            <strong>GitHub Repository</strong>
+            <span id="repoStars">-</span>
+          </div>
+        </a>
+      </section>
+
+      <section class="layout">
+        <aside class="sidebar panel">
+          <h2>Reports</h2>
+          <p id="loadSummary" class="summary">等待加载最近日报。</p>
+          <div id="reportList" class="report-list">
+            <div class="status">等待加载日报内容。</div>
+          </div>
+        </aside>
+
+        <section class="content panel">
+          <div id="reportDetail" class="empty">请选择一份日报。</div>
+        </section>
+      </section> <!-- /layout -->
+
+      <footer class="site-footer">
+        <hr class="footer-divider" />
+        <p class="footer-counter">
+          <span id="busuanzi_container_site_pv">
+            总访问 <span id="busuanzi_value_site_pv">-</span> 次
+          </span>
+          <span class="footer-dot">·</span>
+          <span id="busuanzi_container_site_uv">
+            访客 <span id="busuanzi_value_site_uv">-</span> 人
+          </span>
+        </p>
+      </footer>
+    </main>
+
+    <div id="paperOverlay" class="overlay" aria-hidden="true">
+      <div id="paperOverlayBackdrop" class="overlay-backdrop"></div>
+      <section class="detail-sheet" role="dialog" aria-modal="true">
+        <div class="detail-inner">
+          <div class="detail-topbar">
+            <button id="backButton" class="back-button" type="button">
+              返回日报
+            </button>
+            <a
+              id="issueExternalLink"
+              class="ghost-link"
+              href="#"
+              target="_blank"
+              rel="noreferrer"
+            >
+              在 GitHub 打开
+            </a>
+          </div>
+          <div id="paperDetail" class="detail-loading">选择论文后加载详情。</div>
+        </div>
+      </section>
+      <button id="scrollTopButton" class="scroll-top-button" type="button">
+        回到顶部
+      </button>
+    </div>
+
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <script>
+      const loadSummary = document.getElementById("loadSummary");
+      const reportList = document.getElementById("reportList");
+      const reportDetail = document.getElementById("reportDetail");
+      const repoStars = document.getElementById("repoStars");
+      const repoLink = document.getElementById("repoLink");
+      const paperOverlay = document.getElementById("paperOverlay");
+      const paperOverlayBackdrop = document.getElementById("paperOverlayBackdrop");
+      const detailSheet = paperOverlay.querySelector(".detail-sheet");
+      const backButton = document.getElementById("backButton");
+      const issueExternalLink = document.getElementById("issueExternalLink");
+      const paperDetail = document.getElementById("paperDetail");
+      const scrollTopButton = document.getElementById("scrollTopButton");
+      function resolveRepositorySlug() {
+        const configured = document.documentElement.dataset.repo.trim();
+        if (configured && !configured.startsWith("your-github-user/")) {
+          return configured;
+        }
+        const hostMatch = window.location.hostname.match(/^([^.]+)\.github\.io$/i);
+        if (hostMatch) {
+          const pathParts = window.location.pathname.split("/").filter(Boolean);
+          const repoName = pathParts[0] || `${hostMatch[1]}.github.io`;
+          return `${hostMatch[1]}/${repoName}`;
+        }
+        return configured || "your-github-user/MOT-PaperClaw";
+      }
+
+      const REPO_SLUG = resolveRepositorySlug();
+      const DEFAULT_REPORT_BASE =
+        `https://raw.githubusercontent.com/${REPO_SLUG}/main/daily_reports`;
+      const LOOKBACK_DAYS = 8;
+      const REPORT_BATCH_SIZE = 15;
+      const issueCache = new Map();
+      let allReports = [];
+      let currentReportDate = "";
+      let currentSummaryText = "";
+      let visibleReportCount = REPORT_BATCH_SIZE;
+      let overlayHistoryActive = false;
+      const REPO_API_URL = `https://api.github.com/repos/${REPO_SLUG}`;
+      const REPO_WEB_URL = `https://github.com/${REPO_SLUG}`;
+      const TREE_API_URL =
+        `https://api.github.com/repos/${REPO_SLUG}/git/trees/main?recursive=1`;
+      const REPOSITORY_CONFIGURED = !REPO_SLUG.startsWith("your-github-user/");
+      if (REPOSITORY_CONFIGURED) {
+        repoLink.href = REPO_WEB_URL;
+      } else {
+        repoLink.hidden = true;
+      }
+
+      function normalizeReportBase(input) {
+        const trimmed = input.trim();
+        let normalized = trimmed || DEFAULT_REPORT_BASE;
+
+        if (normalized.includes("github.com")) {
+          normalized = normalized
+            .replace("https://github.com/", "https://raw.githubusercontent.com/")
+            .replace("/blob/", "/")
+            .replace("/tree/", "/");
+        }
+
+        normalized = normalized.replace(/\/README\.md$/i, "");
+        normalized = normalized.replace(/\/\d{6}\/\d{8}\.md$/i, "");
+        normalized = normalized.replace(/\/+$/g, "");
+
+        return normalized || ".";
+      }
+
+      function splitTableRow(row) {
+        const stripped = row.trim().replace(/^\|/, "").replace(/\|$/, "");
+        const cells = [];
+        let current = "";
+
+        for (let index = 0; index < stripped.length; index += 1) {
+          const char = stripped[index];
+          if (char === "\\" && stripped[index + 1] === "|") {
+            current += "|";
+            index += 1;
+            continue;
+          }
+          if (char === "|") {
+            cells.push(current.trim());
+            current = "";
+            continue;
+          }
+          current += char;
+        }
+
+        cells.push(current.trim());
+        return cells;
+      }
+
+      function escapeHtml(text) {
+        return String(text || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function parseInlineMarkdown(text) {
+        if (!text) return "";
+        return escapeHtml(text)
+          .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+          .replace(
+            /\[([^\]]+)\]\(([^)]+)\)/g,
+            (_, label, url) =>
+              `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${label}</a>`
+          )
+          .replace(/`([^`]+)`/g, "<code>$1</code>");
+      }
+
+      function stripMarkdown(text) {
+        return String(text || "")
+          .replace(/\*\*([^*]+)\*\*/g, "$1")
+          .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
+          .replace(/`([^`]+)`/g, "$1")
+          .trim();
+      }
+
+      function extractFirstLink(text) {
+        const match = String(text || "").match(/\[([^\]]+)\]\(([^)]+)\)/);
+        return match ? match[2] : "";
+      }
+
+      function extractMarkdownLinks(text) {
+        return [...String(text || "").matchAll(/\[([^\]]+)\]\(([^)]+)\)/g)].map(
+          (match) => ({
+            label: match[1].trim(),
+            url: match[2].trim(),
+          })
+        );
+      }
+
+      function extractSection(block, title) {
+        const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const pattern = new RegExp(
+          `^##\\s+${escaped}\\s*$\\n?([\\s\\S]*?)(?=^##\\s+|^---\\s*$|(?![\\s\\S]))`,
+          "m"
+        );
+        const match = block.match(pattern);
+        return match ? match[1].trim() : "";
+      }
+
+      function parseParagraphs(section) {
+        return section
+          .split(/\n\s*\n/)
+          .map((part) => part.replace(/\n/g, " ").trim())
+          .filter(Boolean);
+      }
+
+      function parseListItems(section) {
+        return section
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => /^[-*]\s+/.test(line))
+          .map((line) => line.replace(/^[-*]\s+/, "").trim());
+      }
+
+      function parseStats(text) {
+        const numbers = [...text.matchAll(/(\d+)\s*篇/g)].map((item) => item[1]);
+        return [
+          { label: "候选论文", value: numbers[0] || "-" },
+          { label: "匹配论文", value: numbers[1] || "-" },
+          { label: "纳入日报", value: numbers[2] || "-" },
+        ];
+      }
+
+      function isPlaceholderValue(value) {
+        const plain = stripMarkdown(value).replace(/\s+/g, " ");
+        return plain === "" || plain === "-" || plain === "—";
+      }
+
+      function parseArticles(section) {
+        const lines = section
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line.startsWith("|"));
+
+        if (lines.length < 3) return [];
+
+        const headers = splitTableRow(lines[0]).map((cell) => stripMarkdown(cell));
+        const rows = lines.slice(2).map(splitTableRow);
+        return rows
+          .map((cells) => {
+            const row = Object.fromEntries(headers.map((header, index) => [header, cells[index] || ""]));
+            const titleCell = row["标题"] || row["Title"] || cells[0] || "";
+            const authorsCell = row["作者"] || row["Authors"] || cells[1] || "";
+            const institutionCell =
+              row["单位"] || row["机构"] || row["Institution"] || row["Affiliation"] || "";
+            const summaryCell =
+              row["一句话概括"] || row["摘要"] || row["Summary"] || cells[Math.min(cells.length - 2, 3)] || "";
+            const issueCell = row["Issue"] || cells[cells.length - 1] || "";
+
+            return {
+              title: parseInlineMarkdown(titleCell),
+              titleText: stripMarkdown(titleCell),
+              authors: authorsCell,
+              institution: institutionCell,
+              summary: summaryCell,
+              issue: parseInlineMarkdown(issueCell),
+              issueText: stripMarkdown(issueCell),
+              issueUrl: extractFirstLink(issueCell),
+            };
+          })
+          .filter(
+            (item) =>
+              !(
+                isPlaceholderValue(item.titleText) &&
+                isPlaceholderValue(item.authors) &&
+                isPlaceholderValue(item.issueText)
+              )
+          );
+      }
+
+      function formatDate(raw) {
+        return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+      }
+
+      function formatCompactDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}${month}${day}`;
+      }
+
+      function buildRecentDates() {
+        const anchor = new Date();
+        anchor.setHours(12, 0, 0, 0);
+
+        return Array.from({ length: LOOKBACK_DAYS }, (_, index) => {
+          const date = new Date(anchor);
+          date.setDate(anchor.getDate() - (index + 1));
+          return formatCompactDate(date);
+        });
+      }
+
+      function buildReportUrl(basePath, date) {
+        return `${basePath}/${date.slice(0, 6)}/${date}.md`;
+      }
+
+      function parseRequestedPaperIssueUrl() {
+        const match = window.location.hash.match(/^#paper-(\d+)$/);
+        if (!match) return "";
+        return `${REPO_WEB_URL}/issues/${match[1]}`;
+      }
+
+      function parseRequestedReportDate() {
+        const date = new URLSearchParams(window.location.search).get("date") || "";
+        return /^\d{8}$/.test(date) ? date : "";
+      }
+
+      function updateReportUrl(date, options = {}) {
+        const { replace = false } = options;
+        const url = new URL(window.location.href);
+        if (date) {
+          url.searchParams.set("date", date);
+        } else {
+          url.searchParams.delete("date");
+        }
+        const state = {
+          ...(history.state || {}),
+          paperOverlay: Boolean(history.state && history.state.paperOverlay),
+          reportDate: date || "",
+        };
+        const target = `${url.pathname}${url.search}${url.hash}`;
+        history[replace ? "replaceState" : "pushState"](state, "", target);
+      }
+
+      function ensureVisibleForDate(reports, date) {
+        const index = reports.findIndex((item) => item.date === date);
+        if (index < 0) return;
+        const requiredCount =
+          Math.ceil((index + 1) / REPORT_BATCH_SIZE) * REPORT_BATCH_SIZE;
+        visibleReportCount = Math.max(visibleReportCount, requiredCount);
+      }
+
+      async function fetchAvailableReportDates() {
+        if (!REPOSITORY_CONFIGURED) return [];
+        try {
+          const response = await fetch(TREE_API_URL, {
+            headers: {
+              Accept: "application/vnd.github+json",
+            },
+          });
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const payload = await response.json();
+          const tree = Array.isArray(payload.tree) ? payload.tree : [];
+          const dates = tree
+            .map((item) => item.path || "")
+            .map((path) => path.match(/^daily_reports\/\d{6}\/(\d{8})\.md$/))
+            .filter(Boolean)
+            .map((match) => match[1])
+            .sort((left, right) => right.localeCompare(left));
+
+          return [...new Set(dates)];
+        } catch (error) {
+          console.warn("failed to fetch report dates from git tree", error);
+          return buildRecentDates();
+        }
+      }
+
+      function toDisplayUrl(rawUrl) {
+        const match = rawUrl.match(
+          /^https:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)\/(.+)$/
+        );
+        if (!match) return rawUrl;
+        return `https://github.com/${match[1]}/${match[2]}/blob/${match[3]}/${match[4]}`;
+      }
+
+      function parseDailyReport(markdown, sourceUrl, fallbackDate) {
+        const normalized = markdown.replace(/\r\n/g, "\n");
+        const headingMatch =
+          normalized.match(/^#\s+日报\s+(\d{8})/m) ||
+          normalized.match(/^#\s+(\d{8})/m);
+        const date = headingMatch ? headingMatch[1] : fallbackDate;
+        const overviewSection = extractSection(normalized, "📌 今日概况");
+        const highlightsSection = extractSection(normalized, "✨ 今日亮点");
+        const articlesSection = extractSection(normalized, "🗂 今日文章列表");
+        const observationsSection = extractSection(normalized, "🔎 观察");
+        const stats = parseStats(overviewSection);
+        const includedCount = Number.parseInt(stats[2].value, 10);
+
+        return {
+          date,
+          rawUrl: sourceUrl,
+          fileUrl: toDisplayUrl(sourceUrl),
+          overview: parseParagraphs(overviewSection),
+          highlights: parseListItems(highlightsSection),
+          observations: parseListItems(observationsSection),
+          stats,
+          articles: parseArticles(articlesSection),
+          includedCount: Number.isFinite(includedCount) ? includedCount : 0,
+        };
+      }
+
+      function toIssueApiUrl(issueUrl) {
+        if (!issueUrl) return "";
+        if (issueUrl.includes("api.github.com/repos/")) return issueUrl;
+
+        const match = issueUrl.match(
+          /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/
+        );
+        if (!match) return issueUrl;
+        return `https://api.github.com/repos/${match[1]}/${match[2]}/issues/${match[3]}`;
+      }
+
+      function normalizeKeyLabel(text) {
+        return stripMarkdown(text).replace(/[:：]\s*$/, "").trim();
+      }
+
+      function parseMetadataTable(section) {
+        const lines = section
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line.startsWith("|"));
+
+        if (lines.length < 3) return [];
+
+        return lines
+          .slice(2)
+          .map(splitTableRow)
+          .filter((cells) => cells.length >= 2)
+          .map((cells) => ({
+            key: normalizeKeyLabel(cells[0]),
+            value: cells.slice(1).join(" | ").trim(),
+          }));
+      }
+
+      function parseIssueImages(section) {
+        return [...String(section || "").matchAll(/<img[^>]+src="([^"]+)"/g)].map(
+          (match, index) => ({
+            src: match[1],
+            label: `Preview ${index + 1}`,
+          })
+        );
+      }
+
+      function parseAnalysisLines(text) {
+        return String(text || "")
+          .split("\n")
+          .map((line) => {
+            const leadingSpaces = (line.match(/^(\s*)/) || ["", ""])[1].length;
+            const trimmed = line.trim();
+            if (!trimmed) return null;
+
+            const bulletMatch = trimmed.match(/^([-*]|\d+\.)\s+(.+)$/);
+            return {
+              indent: Math.min(2, Math.floor(leadingSpaces / 2)),
+              bullet: Boolean(bulletMatch),
+              text: bulletMatch ? bulletMatch[2] : trimmed,
+            };
+          })
+          .filter(Boolean);
+      }
+
+      function parseAnalysisItems(section) {
+        const normalized = String(section || "").trim();
+        if (!normalized) return [];
+
+        return [...normalized.matchAll(/^###\s+(.+)\n([\s\S]*?)(?=^###\s+|(?![\s\S]))/gm)].map(
+          (match) => {
+            const body = match[2].trim();
+            const conclusionMatch = body.match(/^🎯\s*结论[:：]\s*([\s\S]*?)(?=\n(?:📌|$))/m);
+            const pointsMatch = body.match(/📌\s*要点[:：]\s*\n?([\s\S]*)$/m);
+
+            return {
+              heading: match[1].trim(),
+              conclusion: conclusionMatch ? conclusionMatch[1].trim() : "",
+              points: parseAnalysisLines(pointsMatch ? pointsMatch[1] : body),
+            };
+          }
+        );
+      }
+
+      function parseIssueBody(body) {
+        const normalized = String(body || "").replace(/\r\n/g, "\n");
+        const metadata = parseMetadataTable(extractSection(normalized, "📋 基础信息"));
+        const tldr = parseListItems(extractSection(normalized, "🧠 TL;DR（速览）"));
+        const previews = parseIssueImages(extractSection(normalized, "📸 论文概览"));
+        const analysis = parseAnalysisItems(extractSection(normalized, "❓ 10 问题深度分析"));
+        const metadataMap = Object.fromEntries(metadata.map((item) => [item.key, item.value]));
+
+        return {
+          metadata,
+          metadataMap,
+          tldr,
+          previews,
+          analysis,
+        };
+      }
+
+      function formatDateTime(value) {
+        if (!value) return "";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toLocaleString("zh-CN", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      function formatStarCount(count) {
+        if (!Number.isFinite(count) || count === 0) return "-";
+        if (count >= 1000) {
+          return `${(count / 1000).toFixed(count >= 10000 ? 0 : 1).replace(/\.0$/, "")}k stars`;
+        }
+        return `${count} stars`;
+      }
+
+      function renderMetadataRows(metadata, labels) {
+        const rows = metadata.filter(
+          (item) =>
+            item.key !== "标签" && item.key !== "摘要" && item.key !== "arXiv"
+        );
+        const renderedRows = rows.length
+          ? rows
+              .map(
+                (item) => `
+                  <div class="meta-row">
+                    <strong>${escapeHtml(item.key)}</strong>
+                    <div>${parseInlineMarkdown(item.value)}</div>
+                  </div>
+                `
+              )
+              .join("")
+          : '<div class="meta-row"><strong>信息</strong><div>暂无基础信息。</div></div>';
+
+        const chips = labels.length
+          ? `
+              <div class="meta-row">
+                <strong>标签</strong>
+                <div class="tag-row">${labels
+                  .map((label) => `<span class="chip">${escapeHtml(label)}</span>`)
+                  .join("")}</div>
+              </div>
+            `
+          : "";
+
+        return renderedRows + chips;
+      }
+
+      function renderAnalysisPoints(points) {
+        if (!points.length) {
+          return '<p class="analysis-line">暂无进一步解析。</p>';
+        }
+
+        return points
+          .map(
+            (point) => `
+              <p class="analysis-line ${point.bullet ? "bullet" : ""} indent-${point.indent}">
+                ${parseInlineMarkdown(point.text)}
+              </p>
+            `
+          )
+          .join("");
+      }
+
+      function renderIssueDetail(issue) {
+        const parsed = parseIssueBody(issue.body || "");
+        const abstractValue = parsed.metadataMap["摘要"] || "";
+        const arxivValue = parsed.metadataMap["arXiv"] || "";
+        const arxivLink = extractMarkdownLinks(arxivValue).find((item) =>
+          /^(abs|arxiv)$/i.test(item.label)
+        );
+        const subtitle =
+          parsed.metadataMap["TL;DR"] ||
+          parsed.metadataMap["摘要"] ||
+          "该 issue 暂无摘要信息。";
+        const labelNames = (issue.labels || []).map((label) => label.name);
+        const previewsHtml = parsed.previews.length
+          ? `
+              <div class="detail-card">
+                <h4>论文概览</h4>
+                <div class="preview-grid">
+                  ${parsed.previews
+                    .map(
+                      (image) => `
+                        <figure class="preview-card">
+                          <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.label)}" />
+                          <span>${escapeHtml(image.label)}</span>
+                        </figure>
+                      `
+                    )
+                    .join("")}
+                </div>
+              </div>
+            `
+          : "";
+
+        const analysisHtml = parsed.analysis.length
+          ? parsed.analysis
+              .map(
+                (item) => `
+                  <article class="analysis-item">
+                    <h5>${escapeHtml(item.heading)}</h5>
+                    ${
+                      item.conclusion
+                        ? `<p class="analysis-conclusion">${parseInlineMarkdown(item.conclusion)}</p>`
+                        : ""
+                    }
+                    <div class="analysis-points">
+                      ${renderAnalysisPoints(item.points)}
+                    </div>
+                  </article>
+                `
+              )
+              .join("")
+          : '<div class="analysis-item"><h5>解析</h5><p class="analysis-line">该 issue 暂无结构化分析内容。</p></div>';
+        const abstractHtml = abstractValue
+          ? `
+              <section class="detail-card abstract-card">
+                <h4>摘要</h4>
+                <p class="abstract-text">${parseInlineMarkdown(abstractValue)}</p>
+              </section>
+            `
+          : "";
+
+        paperDetail.innerHTML = `
+          <section class="detail-hero">
+            <p class="detail-kicker">Paper Detail · Issue #${issue.number}</p>
+            <h1 class="detail-title">${escapeHtml(issue.title)}</h1>
+            <p class="detail-subtitle">${parseInlineMarkdown(subtitle)}</p>
+            <div class="tag-row">
+              ${
+                arxivLink
+                  ? `<a href="${escapeHtml(arxivLink.url)}" target="_blank" rel="noreferrer">arXiv</a>`
+                  : ""
+              }
+              <span class="chip">${escapeHtml(
+                issue.state ? issue.state[0].toUpperCase() + issue.state.slice(1) : "Open"
+              )}</span>
+              <span class="chip">更新于 ${escapeHtml(formatDateTime(issue.updated_at))}</span>
+            </div>
+          </section>
+
+          <section class="detail-grid">
+            <div class="detail-card">
+              <h4>基础信息</h4>
+              <div class="meta-grid">
+                ${renderMetadataRows(parsed.metadata, labelNames)}
+              </div>
+            </div>
+          </section>
+
+          ${abstractHtml}
+
+          ${previewsHtml}
+
+          <section class="detail-card">
+            <h4>深度分析</h4>
+            <div class="analysis-list">
+              ${analysisHtml}
+            </div>
+          </section>
+        `;
+      }
+
+      function updateScrollTopButton() {
+        scrollTopButton.classList.toggle("visible", detailSheet.scrollTop > 280);
+      }
+
+      function clearOverlayHistoryState() {
+        if (history.state && history.state.paperOverlay) {
+          history.replaceState(
+            {
+              ...(history.state || {}),
+              paperOverlay: false,
+              reportDate: currentReportDate || parseRequestedReportDate(),
+            },
+            "",
+            `${window.location.pathname}${window.location.search}`
+          );
+        }
+      }
+
+      function setOverlayOpen(isOpen) {
+        paperOverlay.classList.toggle("open", isOpen);
+        paperOverlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
+        if (!isOpen) {
+          scrollTopButton.classList.remove("visible");
+        }
+      }
+
+      function closePaperOverlay(options = {}) {
+        const { fromHistory = false, resetHistory = false } = options;
+        if (!fromHistory && overlayHistoryActive && history.length > 1) {
+          history.back();
+          return;
+        }
+
+        overlayHistoryActive = false;
+        setOverlayOpen(false);
+        if (resetHistory) {
+          clearOverlayHistoryState();
+        }
+      }
+
+      async function openPaperDetail(issueUrl, fallbackTitle, options = {}) {
+        const { skipHistory = false } = options;
+        if (!issueUrl) return;
+
+        if (!skipHistory) {
+          const issueNumberMatch = issueUrl.match(/\/issues\/(\d+)/);
+          const targetHash = issueNumberMatch
+            ? `#paper-${issueNumberMatch[1]}`
+            : "#paper";
+
+          if (!overlayHistoryActive) {
+            history.pushState(
+              {
+                ...(history.state || {}),
+                paperOverlay: true,
+                issueUrl,
+                reportDate: currentReportDate,
+              },
+              "",
+              targetHash
+            );
+            overlayHistoryActive = true;
+          } else {
+            history.replaceState(
+              {
+                ...(history.state || {}),
+                paperOverlay: true,
+                issueUrl,
+                reportDate: currentReportDate,
+              },
+              "",
+              targetHash
+            );
+          }
+        } else {
+          overlayHistoryActive = true;
+        }
+
+        setOverlayOpen(true);
+        detailSheet.scrollTo({ top: 0, behavior: "auto" });
+        updateScrollTopButton();
+        issueExternalLink.href = issueUrl;
+        paperDetail.innerHTML = `
+          <div class="detail-loading">
+            正在加载 <strong>${escapeHtml(fallbackTitle || "论文详情")}</strong>...
+          </div>
+        `;
+
+        const apiUrl = toIssueApiUrl(issueUrl);
+        try {
+          let issue = issueCache.get(apiUrl);
+          if (!issue) {
+            const response = await fetch(apiUrl, {
+              headers: {
+                Accept: "application/vnd.github+json",
+              },
+            });
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            issue = await response.json();
+            issueCache.set(apiUrl, issue);
+          }
+
+          issueExternalLink.href = issue.html_url || issueUrl;
+          renderIssueDetail(issue);
+        } catch (error) {
+          paperDetail.innerHTML = `
+            <div class="detail-error">
+              无法读取该论文的 issue 详情：${escapeHtml(error.message)}。
+              你仍然可以直接访问
+              <a href="${escapeHtml(issueUrl)}" target="_blank" rel="noreferrer">GitHub Issue</a>。
+            </div>
+          `;
+        }
+      }
+
+      function renderList(reports, activeDate, summaryText) {
+        loadSummary.textContent = summaryText;
+
+        if (!reports.length) {
+          reportList.innerHTML =
+            '<div class="status">最近时间窗口内没有可展示的日报。</div>';
+          return;
+        }
+
+        const visibleReports = reports.slice(0, visibleReportCount);
+        const canLoadMore = visibleReportCount < reports.length;
+
+        reportList.innerHTML = visibleReports
+          .map(
+            (report) => `
+              <button class="report-item ${
+                report.date === activeDate ? "active" : ""
+              }" data-date="${report.date}" type="button">
+                <strong>${formatDate(report.date)}</strong>
+                <span>纳入 ${report.includedCount} 篇</span>
+              </button>
+            `
+          )
+          .join("") +
+          `
+            <${
+              canLoadMore ? "button" : "a"
+            }
+              class="report-item more"
+              ${
+                canLoadMore
+                  ? 'id="loadMoreReports" type="button"'
+                  : `href="${REPO_WEB_URL}/tree/main/daily_reports" target="_blank" rel="noreferrer"`
+              }
+            >
+              <strong>More</strong>
+              <span>${
+                canLoadMore ? "继续加载更早 15 天" : "View all reports"
+              }</span>
+            </${canLoadMore ? "button" : "a"}>
+          `;
+
+        reportList.querySelectorAll(".report-item").forEach((button) => {
+          if (button.tagName === "A" || button.id === "loadMoreReports") return;
+          button.addEventListener("click", () =>
+            renderReport(reports, button.dataset.date, summaryText)
+          );
+        });
+
+        const loadMoreButton = document.getElementById("loadMoreReports");
+        if (loadMoreButton) {
+          loadMoreButton.addEventListener("click", () => {
+            visibleReportCount = Math.min(
+              reports.length,
+              visibleReportCount + REPORT_BATCH_SIZE
+            );
+            renderList(reports, activeDate, summaryText);
+          });
+        }
+      }
+
+      function renderReport(reports, date, summaryText, options = {}) {
+        const { skipUrlUpdate = false, replaceUrl = false } = options;
+        const report = reports.find((item) => item.date === date) || reports[0];
+        if (!report) {
+          reportDetail.innerHTML = '<div class="empty">没有可展示的日报。</div>';
+          return;
+        }
+        ensureVisibleForDate(reports, report.date);
+        currentReportDate = report.date;
+        currentSummaryText = summaryText;
+        if (!skipUrlUpdate) {
+          updateReportUrl(report.date, { replace: replaceUrl });
+        }
+        renderList(reports, report.date, summaryText);
+
+        const overviewHtml = report.overview.length
+          ? report.overview.map((line) => `<p>${escapeHtml(line)}</p>`).join("")
+          : "<p>暂无概况。</p>";
+
+        const highlightsHtml = report.highlights.length
+          ? `<ul class="highlights">${report.highlights
+              .map((item) => `<li>${escapeHtml(item)}</li>`)
+              .join("")}</ul>`
+          : "<p>暂无亮点。</p>";
+
+        const observationsHtml = report.observations.length
+          ? `<ul class="highlights">${report.observations
+              .map((item) => `<li>${escapeHtml(item)}</li>`)
+              .join("")}</ul>`
+          : "<p>暂无观察。</p>";
+
+        const articleRows = report.articles.length
+          ? report.articles
+              .map(
+                (item) => `
+                  <tr
+                    class="${item.issueUrl ? "paper-row" : ""}"
+                    ${item.issueUrl ? `data-issue-url="${escapeHtml(item.issueUrl)}" data-title="${escapeHtml(item.titleText)}" tabindex="0"` : ""}
+                  >
+                    <td>
+                      <div class="paper-title">
+                        <strong>${item.title || escapeHtml(item.titleText || "-")}</strong>
+                        ${
+                          item.issueUrl
+                            ? '<span class="paper-hint">Open detail</span>'
+                            : ""
+                        }
+                      </div>
+                    </td>
+                    <td class="paper-col-authors">${escapeHtml(item.authors || "-")}</td>
+                    <td class="paper-col-institution" title="${escapeHtml(
+                      item.institution || "-"
+                    )}"><div class="institution-text">${escapeHtml(
+                      item.institution || "-"
+                    )}</div></td>
+                    <td class="paper-col-summary">${escapeHtml(item.summary || "-")}</td>
+                  </tr>
+                `
+              )
+              .join("")
+          : '<tr><td colspan="4">暂无文章列表。</td></tr>';
+        const articleCards = report.articles.length
+          ? report.articles
+              .map(
+                (item) => `
+                  <article
+                    class="paper-card ${item.issueUrl ? "clickable" : ""}"
+                    ${item.issueUrl ? `data-issue-url="${escapeHtml(item.issueUrl)}" data-title="${escapeHtml(item.titleText)}" tabindex="0"` : ""}
+                  >
+                    <div class="paper-card-row">
+                      <span class="paper-card-label">标题</span>
+                      <div class="paper-card-value">
+                        <div class="paper-title">
+                          <strong>${item.title || escapeHtml(item.titleText || "-")}</strong>
+                          ${
+                            item.issueUrl
+                              ? '<span class="paper-hint">Open detail</span>'
+                              : ""
+                          }
+                        </div>
+                      </div>
+                    </div>
+                    <div class="paper-card-row">
+                      <span class="paper-card-label">作者</span>
+                      <div class="paper-card-value">${escapeHtml(item.authors || "-")}</div>
+                    </div>
+                    <div class="paper-card-row">
+                      <span class="paper-card-label">单位</span>
+                      <div class="paper-card-value institution">${escapeHtml(item.institution || "-")}</div>
+                    </div>
+                    <div class="paper-card-row">
+                      <span class="paper-card-label">一句话概括</span>
+                      <div class="paper-card-value">${escapeHtml(item.summary || "-")}</div>
+                    </div>
+                  </article>
+                `
+              )
+              .join("")
+          : '<div class="empty">暂无文章列表。</div>';
+
+        reportDetail.innerHTML = `
+          <div class="report-head">
+            <div>
+              <h3>${formatDate(report.date)}</h3>
+              <a href="${report.fileUrl}" target="_blank" rel="noreferrer">打开原始日报</a>
+            </div>
+          </div>
+
+          <div class="stats">
+            ${report.stats
+              .map(
+                (stat) => `
+                  <div class="stat">
+                    <strong>${stat.value}</strong>
+                    <span>${stat.label}</span>
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+
+          <div class="section">
+            <h2>Overview</h2>
+            ${overviewHtml}
+          </div>
+
+          <div class="section">
+            <h2>Highlights</h2>
+            ${highlightsHtml}
+          </div>
+
+          <div class="section">
+            <h2>Observations</h2>
+            ${observationsHtml}
+          </div>
+
+          <div class="section">
+            <h2>Papers</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="col-title">标题</th>
+                    <th class="col-authors">作者</th>
+                    <th class="col-institution">单位</th>
+                    <th class="col-summary">一句话概括</th>
+                  </tr>
+                </thead>
+                <tbody>${articleRows}</tbody>
+              </table>
+            </div>
+            <div class="papers-mobile">${articleCards}</div>
+          </div>
+        `;
+      }
+
+      async function fetchReport(basePath, date) {
+        const url = buildReportUrl(basePath, date);
+
+        try {
+          const response = await fetch(url, { cache: "no-store" });
+          if (!response.ok) {
+            return { date, url, error: `HTTP ${response.status}` };
+          }
+
+          const markdown = await response.text();
+          return {
+            date,
+            url,
+            report: parseDailyReport(markdown, url, date),
+          };
+        } catch (error) {
+          return { date, url, error: error.message };
+        }
+      }
+
+      async function loadRepoStars() {
+        if (!REPOSITORY_CONFIGURED) return;
+        try {
+          const response = await fetch(REPO_API_URL, {
+            headers: {
+              Accept: "application/vnd.github+json",
+            },
+          });
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const repo = await response.json();
+          repoStars.textContent = formatStarCount(repo.stargazers_count);
+        } catch (error) {
+          repoStars.textContent = "-";
+        }
+      }
+
+      async function loadReports() {
+        const basePath = DEFAULT_REPORT_BASE;
+        const dates = await fetchAvailableReportDates();
+        const requestedDate = parseRequestedReportDate();
+        const requestedIssueUrl = parseRequestedPaperIssueUrl();
+        visibleReportCount = REPORT_BATCH_SIZE;
+        closePaperOverlay({ fromHistory: true, resetHistory: true });
+        loadSummary.textContent = `正在读取 ${dates.length} 天日报...`;
+        reportList.innerHTML = '<div class="status">正在读取内容...</div>';
+        reportDetail.innerHTML = '<div class="empty">正在解析日报结构...</div>';
+
+        try {
+          const results = await Promise.all(
+            dates.map((date) => fetchReport(basePath, date))
+          );
+          const reports = results
+            .filter((item) => item.report)
+            .map((item) => item.report)
+            .sort((left, right) => right.date.localeCompare(left.date));
+          const summaryText = reports.length
+            ? `已展示 ${reports.length} 天日报，范围 ${formatDate(
+                reports[0].date
+              )} 到 ${formatDate(reports[reports.length - 1].date)}。`
+            : `已尝试读取 ${dates.length} 天日报。`;
+
+          if (!reports.length) {
+            renderList([], "", summaryText);
+            reportDetail.innerHTML =
+              '<div class="empty">尚未生成可展示的 MOT 日报。</div>';
+            return;
+          }
+
+          allReports = reports;
+          const initialDate = reports.some((item) => item.date === requestedDate)
+            ? requestedDate
+            : reports[0].date;
+          renderReport(reports, initialDate, summaryText, { replaceUrl: true });
+          if (requestedIssueUrl) {
+            openPaperDetail(requestedIssueUrl, "论文详情", { skipHistory: true });
+          }
+        } catch (error) {
+          loadSummary.textContent = "加载失败";
+          reportList.innerHTML =
+            '<div class="status">加载失败。请确认日报根路径可访问。</div>';
+          reportDetail.innerHTML = `
+            <div class="empty">
+              无法读取内容：${error.message}<br />
+              如果你是直接双击打开 HTML，请改用 <code>python3 -m http.server</code> 提供静态服务。GitHub 链接请填到 <code>daily_reports</code> 目录级别，或任意单日报/README 链接。
+            </div>
+          `;
+        }
+      }
+
+      detailSheet.addEventListener("scroll", updateScrollTopButton);
+      scrollTopButton.addEventListener("click", () => {
+        detailSheet.scrollTo({ top: 0, behavior: "smooth" });
+      });
+      reportDetail.addEventListener("click", (event) => {
+        const trigger = event.target.closest("[data-issue-url]");
+        if (!trigger) return;
+
+        openPaperDetail(
+          trigger.getAttribute("data-issue-url"),
+          trigger.getAttribute("data-title")
+        );
+      });
+      reportDetail.addEventListener("keydown", (event) => {
+        const trigger = event.target.closest("[data-issue-url]");
+        if (!trigger) return;
+
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openPaperDetail(
+            trigger.getAttribute("data-issue-url"),
+            trigger.getAttribute("data-title")
+          );
+        }
+      });
+      backButton.addEventListener("click", closePaperOverlay);
+      paperOverlayBackdrop.addEventListener("click", closePaperOverlay);
+      document.addEventListener("keydown", (event) => {
+        const activeTag = document.activeElement?.tagName;
+        const isEditable =
+          activeTag === "INPUT" ||
+          activeTag === "TEXTAREA" ||
+          document.activeElement?.isContentEditable;
+
+        if (
+          paperOverlay.classList.contains("open") &&
+          event.key === "Backspace" &&
+          !isEditable
+        ) {
+          event.preventDefault();
+          closePaperOverlay();
+          return;
+        }
+
+        if (event.key === "Escape") {
+          closePaperOverlay();
+        }
+      });
+      window.addEventListener("popstate", (event) => {
+        const targetDate = parseRequestedReportDate();
+        if (allReports.length) {
+          const fallbackDate = allReports[0]?.date || "";
+          const resolvedDate =
+            targetDate && allReports.some((item) => item.date === targetDate)
+              ? targetDate
+              : fallbackDate;
+          if (resolvedDate && resolvedDate !== currentReportDate) {
+            renderReport(allReports, resolvedDate, currentSummaryText, {
+              skipUrlUpdate: true,
+            });
+          }
+        }
+
+        if (event.state && event.state.paperOverlay) {
+          openPaperDetail(event.state.issueUrl, "论文详情", { skipHistory: true });
+          return;
+        }
+
+        if (paperOverlay.classList.contains("open")) {
+          closePaperOverlay({ fromHistory: true });
+        }
+      });
+      window.addEventListener("hashchange", () => {
+        const requestedIssueUrl = parseRequestedPaperIssueUrl();
+        if (requestedIssueUrl) {
+          openPaperDetail(requestedIssueUrl, "论文详情", { skipHistory: true });
+          return;
+        }
+
+        if (paperOverlay.classList.contains("open")) {
+          closePaperOverlay({ fromHistory: true });
+        }
+      });
+
+      if (!history.state || typeof history.state.paperOverlay === "undefined") {
+        history.replaceState(
+          {
+            paperOverlay: false,
+            reportDate: parseRequestedReportDate(),
+          },
+          "",
+          window.location.href
+        );
+      }
+
+      loadRepoStars();
+      loadReports();
+    </script>
+  </body>
+</html>

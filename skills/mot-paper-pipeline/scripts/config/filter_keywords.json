@@ -1,0 +1,50 @@
+{
+  "mot_query_terms": [
+    "multi-object tracking",
+    "multiple object tracking",
+    "multi-target tracking",
+    "multiple target tracking",
+    "multi-camera tracking",
+    "multi-view tracking",
+    "3D multi-object tracking",
+    "tracking-by-detection",
+    "joint detection and tracking"
+  ],
+  "mot_signal_patterns": [
+    "(?i)\\bmulti[- ]object track(?:ing|er|ers)\\b",
+    "(?i)\\bmultiple[- ]object track(?:ing|er|ers)\\b",
+    "(?i)\\bmulti[- ]target track(?:ing|er|ers)\\b",
+    "(?i)\\bmultiple[- ]target track(?:ing|er|ers)\\b",
+    "(?i)\\bmulti[- ]camera (?:multi[- ]object )?track(?:ing|er|ers)\\b",
+    "(?i)\\bmulti[- ]view (?:multi[- ]object )?track(?:ing|er|ers)\\b",
+    "(?i)\\b3D multi[- ]object track(?:ing|er|ers)\\b",
+    "(?i)\\btracking[- ]by[- ]detection\\b",
+    "(?i)\\bjoint detection and track(?:ing|er|ers)\\b",
+    "(?i)\\btrack(?:ing)? multiple (?:objects?|targets?|people|pedestrians?|vehicles?|agents?)\\b",
+    "\\bMOT\\b(?=[^\\n.]{0,80}\\b(?:tracking|tracker|benchmark|association)\\b)|\\b(?:tracking|tracker|benchmark|association)\\b[^\\n.]{0,80}\\bMOT\\b"
+  ],
+  "tracking_method_patterns": [
+    "(?i)\\bdata association\\b",
+    "(?i)\\btracklets?\\b",
+    "(?i)\\bidentity (?:association|switch(?:es)?)\\b",
+    "(?i)\\bre-identification\\b|\\bReID\\b",
+    "(?i)\\btrajectory (?:association|prediction|reasoning)\\b",
+    "(?i)\\btemporal association\\b",
+    "(?i)\\bocclusion(?:-aware)?\\b",
+    "(?i)\\bKalman filter\\b",
+    "\\bHOTA\\b|\\bMOTA\\b|\\bIDF1\\b",
+    "(?i)\\bMOT(?:15|16|17|20|Challenge)\\b",
+    "(?i)\\bDanceTrack\\b|\\bBDD100K\\b|\\bKITTI\\b|\\bnuScenes\\b|\\bWaymo\\b",
+    "(?i)\\bonline track(?:ing|er)\\b",
+    "(?i)\\boffline track(?:ing|er)\\b",
+    "(?i)\\bend-to-end track(?:ing|er)\\b"
+  ],
+  "exclude_patterns": [
+    "(?i)\\bsingle[- ]object tracking\\b",
+    "(?i)\\bvisual object tracking\\b",
+    "(?i)\\bvideo object segmentation\\b",
+    "(?i)\\bvisual place recognition\\b",
+    "(?i)\\bSLAM\\b",
+    "(?i)\\bstructure from motion\\b"
+  ]
+}

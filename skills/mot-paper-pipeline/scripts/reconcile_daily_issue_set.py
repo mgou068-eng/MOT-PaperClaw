@@ -1,0 +1,239 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+
+import daily_arxiv_cross_filter
+import daily_digest_llm_upgrade
+import paper_processor
+import sync_daily_reports_to_repo
+from clients.github_ops import extract_arxiv_id_from_issue
+from pipeline_config import get_repo, load_config
+from services.issue_index import ensure_index, lookup_issue, save_index, update_index_from_issue
+
+
+CONFIG = load_config()
+
+
+def ensure_stats(stats_json: str, date_str: str) -> dict:
+    path = Path(stats_json)
+    if not path.exists():
+        print(f"STATS_MISSING {stats_json} -> rebuilding via filter --dry-run")
+        daily_arxiv_cross_filter.main(
+            dry_run=True,
+            days_back=2,
+            stats_out=stats_json,
+            target_date=date_str,
+        )
+    return load_stats(stats_json, date_str)
+
+
+def load_stats(stats_json: str, date_str: str) -> dict:
+    path = Path(stats_json)
+    if not path.exists():
+        raise RuntimeError(f"stats file not found: {stats_json}")
+    obj = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(obj, dict):
+        raise RuntimeError(f"invalid stats json: {stats_json}")
+    if obj.get("date") != date_str:
+        raise RuntimeError(f"stats date mismatch: expected {date_str}, got {obj.get('date')}")
+    if not obj.get("selected_arxiv_ids"):
+        raise RuntimeError(
+            f"stats file missing selected_arxiv_ids: {stats_json}. rerun filter first."
+        )
+    return obj
+
+
+def get_open_date_issues(repo, date_str: str):
+    issues = list(repo.get_issues(state="open", labels=[date_str]))
+    issues.sort(key=lambda x: x.number)
+    return issues
+
+
+def split_date_issues(issues):
+    digest_issue = None
+    paper_issues = []
+    for issue in issues:
+        if "日报" in issue.title:
+            digest_issue = issue
+        else:
+            paper_issues.append(issue)
+    return digest_issue, paper_issues
+
+
+def clear_missing_from_index(repo, missing: set[str]) -> set[str]:
+    if not missing:
+        return missing
+
+    index = ensure_index(repo)
+    remaining = set(missing)
+    for arxiv_id in sorted(missing):
+        issue = lookup_issue(repo, index, arxiv_id)
+        if issue is None:
+            continue
+        print(f"FOUND_INDEX {arxiv_id} -> #{issue.number}")
+        remaining.discard(arxiv_id)
+    return remaining
+
+
+def _append_unique(items: list, value):
+    if value not in items:
+        items.append(value)
+
+
+def process_stats_todo_items(repo, stats: dict, stats_json: str, date_str: str, target_ids: set[str]) -> dict:
+    todo_items = stats.get("todo_items") or []
+    if not todo_items:
+        return stats
+
+    index = ensure_index(repo)
+    for item in todo_items:
+        arxiv_id = item.get("arxiv_id")
+        if not arxiv_id or arxiv_id not in target_ids:
+            continue
+
+        issue_number = item.get("issue_number")
+        print(
+            f"REBUILD_TODO {arxiv_id} | issue={issue_number or '-'} | reason={item.get('reason') or '-'}"
+        )
+        result, error_msg = paper_processor.process_paper(
+            arxiv_id,
+            issue_number=issue_number,
+            target_date=date_str,
+        )
+        if result is not None and hasattr(result, "number"):
+            update_index_from_issue(index, arxiv_id, result)
+            _append_unique(stats.setdefault("successful_selected_arxiv_ids", []), arxiv_id)
+            _append_unique(
+                stats.setdefault("successful_selected_items", []),
+                {
+                    "arxiv_id": arxiv_id,
+                    "published": item.get("published", ""),
+                    "title": item.get("title", ""),
+                },
+            )
+        else:
+            _append_unique(stats.setdefault("failed_arxiv_ids", []), arxiv_id)
+            stats.setdefault("failed_items", []).append(
+                {
+                    **item,
+                    "error": error_msg or "未知错误",
+                }
+            )
+
+        Path(stats_json).write_text(json.dumps(stats, ensure_ascii=False), encoding="utf-8")
+
+    save_index(repo, index)
+    return stats
+
+
+def reconcile(date_str: str, stats_json: str, dry_run: bool = False, skip_digest: bool = False, skip_sync: bool = False) -> int:
+    stats = ensure_stats(stats_json, date_str)
+    expected_ids = set(stats["selected_arxiv_ids"])
+    repo = get_repo(CONFIG)
+    digest_issue, paper_issues = split_date_issues(get_open_date_issues(repo, date_str))
+
+    keep = []
+    extra = []
+    missing = set(expected_ids)
+    unknown = []
+
+    for issue in paper_issues:
+        arxiv_id = extract_arxiv_id_from_issue(issue)
+        if not arxiv_id:
+            unknown.append(issue)
+            continue
+        if arxiv_id in expected_ids:
+            keep.append(issue)
+            missing.discard(arxiv_id)
+        else:
+            extra.append(issue)
+
+    print(f"DATE {date_str}")
+    print(f"EXPECTED {len(expected_ids)}")
+    print(f"KEEP {len(keep)}")
+    print(f"EXTRA {len(extra)}")
+    print(f"MISSING {len(missing)}")
+    print(f"UNKNOWN {len(unknown)}")
+
+    for issue in extra:
+        print(f"EXTRA #{issue.number} | {extract_arxiv_id_from_issue(issue) or '-'} | {issue.title}")
+    for issue in unknown:
+        print(f"UNKNOWN #{issue.number} | {issue.title}")
+    for arxiv_id in sorted(missing):
+        print(f"MISSING_ARXIV {arxiv_id}")
+    refresh_ids = set(stats.get("refresh_arxiv_ids") or [])
+    for arxiv_id in sorted(refresh_ids):
+        print(f"REFRESH_ARXIV {arxiv_id}")
+
+    if dry_run:
+        print("DRY_RUN no changes applied")
+        return 0
+
+    comment = (
+        f"Closed after reconciling the {date_str} paper set against the latest selected_arxiv_ids "
+        f"from {stats_json}; this issue is outside the final kept set for that date."
+    )
+    for issue in extra:
+        issue.create_comment(comment)
+        issue.edit(state="closed")
+        print(f"CLOSED #{issue.number}")
+
+    process_ids = set(missing) | refresh_ids
+    if process_ids:
+        print(
+            f"REBUILD_TODOS {date_str} | {', '.join(sorted(process_ids))} -> processing stats todo_items"
+        )
+        stats = process_stats_todo_items(repo, stats, stats_json, date_str, process_ids)
+        stats = load_stats(stats_json, date_str)
+        expected_ids = set(stats["selected_arxiv_ids"])
+        digest_issue, paper_issues = split_date_issues(get_open_date_issues(repo, date_str))
+        missing = set(expected_ids)
+        for issue in paper_issues:
+            arxiv_id = extract_arxiv_id_from_issue(issue)
+            if arxiv_id in expected_ids:
+                missing.discard(arxiv_id)
+        missing -= set(stats.get("successful_selected_arxiv_ids") or [])
+        missing = clear_missing_from_index(repo, missing)
+        if missing:
+            raise RuntimeError(
+                f"cannot regenerate digest for {date_str}; missing expected arxiv ids: {', '.join(sorted(missing))}"
+            )
+
+    if not skip_digest:
+        daily_digest_llm_upgrade.main(target_date=date_str, stats_json=stats_json)
+    if not skip_sync:
+        sync_daily_reports_to_repo.main()
+
+    return 0
+
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--date", required=True, help="指定日期，格式 YYYYMMDD")
+    parser.add_argument(
+        "--stats-json",
+        dest="stats_json",
+        help="筛选统计 JSON 文件路径，默认 memory/mot_daily_stats_YYYYMMDD.json",
+    )
+    parser.add_argument("--dry-run", action="store_true", help="仅打印差异，不关闭 issue")
+    parser.add_argument("--skip-digest", action="store_true", help="仅清理 issue，不重建日报")
+    parser.add_argument("--skip-sync", action="store_true", help="清理后不执行 sync")
+    args = parser.parse_args()
+
+    stats_json = args.stats_json or f"memory/mot_daily_stats_{args.date}.json"
+    return reconcile(
+        date_str=args.date,
+        stats_json=stats_json,
+        dry_run=args.dry_run,
+        skip_digest=args.skip_digest,
+        skip_sync=args.skip_sync,
+    )
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

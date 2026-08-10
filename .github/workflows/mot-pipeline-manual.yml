@@ -1,0 +1,135 @@
+name: MOT Pipeline Manual
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Command to run"
+        required: true
+        default: "run_no_notify"
+        type: choice
+        options:
+          - run_no_notify
+          - run_notify
+          - reconcile
+          - doctor
+      date:
+        description: "Optional target date in YYYYMMDD"
+        required: false
+        type: string
+
+concurrency:
+  group: mot-pipeline-manual
+  cancel-in-progress: false
+
+jobs:
+  operate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      GITHUB_TOKEN: ${{ secrets.MOT_GITHUB_TOKEN }}
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+      MOT_GITHUB_REPO: ${{ vars.MOT_GITHUB_REPO }}
+      LLM_MODEL: ${{ vars.LLM_MODEL }}
+      LLM_API_URL: ${{ vars.LLM_API_URL }}
+      GITHUB_TIMEOUT: ${{ vars.GITHUB_TIMEOUT }}
+      GITHUB_RETRY: ${{ vars.GITHUB_RETRY }}
+      ARXIV_API_URL: ${{ vars.ARXIV_API_URL }}
+      ARXIV_USER_AGENT: ${{ vars.ARXIV_USER_AGENT }}
+      DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+      FEISHU_TARGET: ${{ vars.FEISHU_TARGET }}
+      OPENCLAW_BIN: ${{ vars.OPENCLAW_BIN }}
+      MOT_FILTER_KEYWORDS_FILE: scripts/config/filter_keywords.json
+      MOT_FILTER_PROMPT_FILE: scripts/prompts/filter_cross_prompt.md
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout (sparse)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            skills/mot-paper-pipeline
+            papers/issue_index.json
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+
+      - name: Install Python dependencies
+        working-directory: skills/mot-paper-pipeline
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements.txt
+
+      - name: Doctor
+        working-directory: skills/mot-paper-pipeline
+        run: python3 scripts/cli.py doctor
+
+      - name: Run manual command
+        working-directory: skills/mot-paper-pipeline
+        env:
+          DISPATCH_COMMAND: ${{ github.event.inputs.command }}
+          DISPATCH_DATE: ${{ github.event.inputs.date }}
+        run: |
+          set -euo pipefail
+
+          case "${DISPATCH_COMMAND:-run_no_notify}" in
+            doctor)
+              python3 scripts/cli.py doctor
+              ;;
+            reconcile)
+              if [[ -z "${DISPATCH_DATE:-}" ]]; then
+                echo "workflow_dispatch command=reconcile requires date" >&2
+                exit 1
+              fi
+              python3 scripts/cli.py reconcile --date "${DISPATCH_DATE}"
+              ;;
+            run_notify)
+              if [[ -n "${DISPATCH_DATE:-}" ]]; then
+                python3 scripts/cli.py run --date "${DISPATCH_DATE}" --notify
+              else
+                python3 scripts/cli.py run --notify
+              fi
+              ;;
+            run_no_notify)
+              if [[ -n "${DISPATCH_DATE:-}" ]]; then
+                python3 scripts/cli.py run --date "${DISPATCH_DATE}" --no-notify
+              else
+                python3 scripts/cli.py run --no-notify
+              fi
+              ;;
+            *)
+              echo "unsupported command: ${DISPATCH_COMMAND}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Print pipeline state
+        if: always()
+        working-directory: skills/mot-paper-pipeline
+        run: |
+          if ls memory/pipeline_state/*.json >/dev/null 2>&1; then
+            for file in memory/pipeline_state/*.json; do
+              echo "===== ${file} ====="
+              cat "${file}"
+            done
+          else
+            echo "No pipeline_state json found"
+          fi
+
+      - name: Upload runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mot-pipeline-runtime-manual
+          path: |
+            skills/mot-paper-pipeline/memory/
