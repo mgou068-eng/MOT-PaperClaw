@@ -97,12 +97,16 @@ def reconcile_command(args) -> None:
     )
 
 
-def paper_command(args) -> None:
+def paper_command(args) -> int:
     result, err = paper_processor.process_paper(args.arxiv_id, args.issue_number, dry_run=args.dry_run, output_dir=args.output_dir)
     if err:
         print(f"❌ {err}")
-    elif result and hasattr(result, "number"):
+        return 1
+    if result and hasattr(result, "number"):
         print(f"✅ #{result.number}")
+        return 0
+    print("❌ 论文处理未返回结果")
+    return 1
 
 
 def rebuild_index_command(args) -> None:

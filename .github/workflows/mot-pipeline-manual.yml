@@ -11,10 +11,15 @@ on:
         options:
           - run_no_notify
           - run_notify
+          - paper
           - reconcile
           - doctor
       date:
         description: "Optional target date in YYYYMMDD"
+        required: false
+        type: string
+      arxiv_id:
+        description: "Required for paper command, for example 2110.06864"
         required: false
         type: string
 
@@ -79,6 +84,7 @@ jobs:
         env:
           DISPATCH_COMMAND: ${{ github.event.inputs.command }}
           DISPATCH_DATE: ${{ github.event.inputs.date }}
+          DISPATCH_ARXIV_ID: ${{ github.event.inputs.arxiv_id }}
         run: |
           set -euo pipefail
 
@@ -92,6 +98,13 @@ jobs:
                 exit 1
               fi
               python3 scripts/cli.py reconcile --date "${DISPATCH_DATE}"
+              ;;
+            paper)
+              if [[ -z "${DISPATCH_ARXIV_ID:-}" ]]; then
+                echo "workflow_dispatch command=paper requires arxiv_id" >&2
+                exit 1
+              fi
+              python3 scripts/cli.py paper "${DISPATCH_ARXIV_ID}"
               ;;
             run_notify)
               if [[ -n "${DISPATCH_DATE:-}" ]]; then
