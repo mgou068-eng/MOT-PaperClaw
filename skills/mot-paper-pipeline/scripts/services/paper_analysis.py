@@ -84,6 +84,30 @@ def format_answer_md(text: str) -> str:
     return stripped
 
 
+def normalize_mermaid_flowchart(text: str) -> str:
+    """Keep only renderable Mermaid flowchart source returned by the LLM."""
+    stripped = (text or "").strip()
+    stripped = re.sub(r"^```(?:mermaid)?\s*", "", stripped, flags=re.IGNORECASE)
+    stripped = re.sub(r"\s*```$", "", stripped)
+    match = re.search(r"(?im)^flowchart\s+(?:LR|TD|RL|BT)\b", stripped)
+    if not match:
+        return ""
+    return stripped[match.start():].strip()
+
+
+def normalize_glossary(text: str) -> str:
+    """Normalize common bullet variants without inventing missing terms."""
+    output: list[str] = []
+    for raw_line in (text or "").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("```") or line.upper().startswith("GLOSSARY"):
+            continue
+        bullet = re.match(r"^(?:[-*•]|\d+[.)、])\s*(.+)$", line)
+        if bullet:
+            output.append(f"- {bullet.group(1).strip()}")
+    return dedupe_bullets("\n".join(output))
+
+
 def quality_gate(info: dict, analysis: dict, abstract_zh: str, uploaded_images: int) -> tuple[bool, list[str]]:
     errors: list[str] = []
     if not info.get("title") or has_bad_placeholder(info.get("title")):
@@ -98,10 +122,18 @@ def quality_gate(info: dict, analysis: dict, abstract_zh: str, uploaded_images: 
         errors.append("摘要为空或无效")
     if uploaded_images < 1:
         errors.append("图片数量不足（至少1张）")
+    flowchart = normalize_mermaid_flowchart(analysis.get("flowchart", ""))
+    if not flowchart or len(re.findall(r"-->", flowchart)) < 4:
+        errors.append("方法流程图为空或节点不足")
+    glossary = normalize_glossary(analysis.get("glossary", ""))
+    if len(re.findall(r"^- ", glossary, flags=re.MULTILINE)) < 5:
+        errors.append("关键术语不足（至少5项）")
     for i in range(1, 11):
         answer = analysis.get(f"q{i}", "")
         if not answer or has_bad_placeholder(answer):
             errors.append(f"Q{i} 未通过质检")
+        elif i in {3, 4, 5, 6, 7} and len(answer.strip()) < 140:
+            errors.append(f"Q{i} 实现说明过短")
     return len(errors) == 0, errors
 
 
@@ -761,6 +793,11 @@ def summarize_paper(title: str, authors: str, abstract_en: str, pdf_text: str, r
     format_spec = """
 请按以下格式输出（纯文本，不要 JSON，不要代码块）：
 摘要翻译: <中文摘要>
+FLOWCHART:
+flowchart LR
+  A[输入视频] --> B[论文方法中的实际模块]
+GLOSSARY:
+- 术语：在本文中的具体含义
 A1: <回答>
 A2: <回答>
 A3: <回答>
@@ -772,42 +809,47 @@ A8: <回答>
 A9: <回答>
 A10: <回答>
 要求：
-1) A1-A10 每项必须非空，禁止“待提取/未知/分析中/N/A/Unknown”；
-2) 每项用结构化 Markdown 输出，优先采用：
-   - 🎯 结论：1 句
-   - 📌 要点：3-5 条 bullet
-3) 同一项内不要重复表达；尤其 A2（前人技术路线）必须是互不重复的路线清单。
+1) FLOWCHART、GLOSSARY、A1-A10 每项必须非空，禁止“待提取/未知/分析中/N/A/Unknown”；
+2) A3-A6 是实现核心，必须出现论文具体模块名，并按输入、运算、输出、连接位置说明；
+3) A7 必须按帧顺序解释一个困难事件，不得虚构具体数值；
+4) A8 必须把实验变化与方法结论对应；
+5) 同一项内不要重复表达，不要为了格式堆砌空泛 bullet。
 """
-    result = call_llm(base_prompt + "\n\n" + format_spec, max_tokens=6000, timeout=400)
+    result = call_llm(base_prompt + "\n\n" + format_spec, max_tokens=7500, timeout=450)
 
     missing_markers = [i for i in range(1, 11) if not re.search(rf"\bA{i}[:：]", result)]
     if missing_markers:
         if retry_logger:
             retry_logger("STEP-4", "RETRY", f"缺少标记 A{missing_markers}")
-        retried = call_llm(base_prompt + "\n\n" + format_spec, max_tokens=6000, timeout=400)
+        retried = call_llm(base_prompt + "\n\n" + format_spec, max_tokens=7500, timeout=450)
         if retried:
             result = retried
 
     analysis = {"abstract_zh": ""}
-    abstract_match = re.search(r"摘要翻译[:：]\s*([\s\S]*?)(?=\nA1[:：])", result)
+    abstract_match = re.search(r"摘要翻译[:：]\s*([\s\S]*?)(?=\nFLOWCHART[:：]|\nA1[:：])", result)
     if abstract_match:
         analysis["abstract_zh"] = abstract_match.group(1).strip()
+
+    flowchart_match = re.search(r"FLOWCHART[:：]\s*([\s\S]*?)(?=\nGLOSSARY[:：])", result)
+    glossary_match = re.search(r"GLOSSARY[:：]\s*([\s\S]*?)(?=\nA1[:：])", result)
+    analysis["flowchart"] = normalize_mermaid_flowchart(flowchart_match.group(1)) if flowchart_match else ""
+    analysis["glossary"] = normalize_glossary(glossary_match.group(1)) if glossary_match else ""
 
     def extract_answer(index: int, text: str) -> str:
         match = re.search(rf"\n?A{index}[:：]\s*([\s\S]*?)(?=\nA{index+1}[:：]|$)", text)
         return match.group(1).strip() if match else ""
 
     repair_questions = (
-        "本文解决哪个 MOT 问题，适用什么设定与场景？",
-        "相关方法包含哪些跟踪技术路线？",
-        "现有方法在检测、关联、遮挡或长时序上有什么局限？",
-        "本文的整体跟踪流程与核心思路是什么？",
-        "检测器、外观/ReID、运动模型和数据关联如何设计？",
-        "主要贡献和关键消融结论是什么？",
-        "使用哪些数据集、指标与协议，结果如何？",
-        "代码、模型和配置是否开源并支持复现？",
-        "如何评价创新性、实验完整性和工程实用性？",
-        "有哪些失效模式、评测偏差、实时性问题和改进方向？",
+        "用通俗语言说明输入、输出和相对基线的核心新增点。",
+        "用具体失败场景说明旧方法为何需要被改进。",
+        "按执行顺序解释从视频输入到轨迹输出的完整流程，并区分训练与推理。",
+        "按输入、具体运算、输出、作用机制解释最关键创新模块。",
+        "解释其余关键模块、关联代价、匹配与轨迹管理如何实现。",
+        "解释训练数据、监督信号、损失函数以及推理阶段保留的模块。",
+        "用连续三帧和一个困难事件逐步走完本文方法，解释 ID 如何保持。",
+        "用关键主结果与消融说明实验到底证明了什么、不能证明什么。",
+        "整理复现所需实现配置、阈值、硬件、速度和代码状态。",
+        "对比最相关 MOT 路线，说明真正新增点、代价、适用场景与失败边界。",
     )
 
     for i in range(1, 11):
@@ -815,13 +857,15 @@ A10: <回答>
 
     for i in range(1, 11):
         answer = analysis.get(f"q{i}", "")
-        if answer and not has_bad_placeholder(answer):
+        minimum_length = 180 if i in {3, 4, 5, 6, 7} else 80
+        if answer and not has_bad_placeholder(answer) and len(answer) >= minimum_length:
             continue
 
         repaired = ""
         for _ in range(2):
             repair_prompt = (
-                f"基于以下论文信息，仅回答A{i}对应问题，120-220字，中文，不要编号前缀，不要占位词。\n"
+                f"基于以下论文信息，仅回答A{i}对应问题，180-350字，中文，不要编号前缀，不要占位词。"
+                "涉及模块时必须按输入、具体运算、输出、作用机制解释；论文未说明的信息明确指出。\n"
                 f"Q{i}问题：{repair_questions[i - 1]}\n"
                 f"标题：{title}\n作者：{authors}\n摘要：{abstract_en[:1500]}\n正文片段：{pdf_text[:4000]}"
             )
@@ -829,6 +873,30 @@ A10: <回答>
             if repaired and not has_bad_placeholder(repaired):
                 break
         analysis[f"q{i}"] = repaired if repaired else "该问题在论文中信息有限，基于摘要与正文可得出初步结论。"
+
+    if (
+        not analysis.get("flowchart")
+        or not re.search(r"flowchart\s+(?:LR|TD|RL|BT)", analysis["flowchart"], re.IGNORECASE)
+        or len(re.findall(r"-->", analysis["flowchart"])) < 4
+    ):
+        flow_prompt = (
+            "基于以下论文，输出一段 Mermaid flowchart LR 源码，不要代码围栏。"
+            "使用5-9个简短中文节点，严格按论文的数据流覆盖输入、核心模块、关联/轨迹更新和输出；不要编造模块。\n"
+            f"标题：{title}\n摘要：{abstract_en[:1500]}\n正文片段：{pdf_text[:6000]}"
+        )
+        analysis["flowchart"] = normalize_mermaid_flowchart(
+            call_llm(flow_prompt, max_tokens=700, timeout=150)
+        )
+
+    if not analysis.get("glossary") or len(re.findall(r"^- ", analysis["glossary"], re.MULTILINE)) < 5:
+        glossary_prompt = (
+            "基于以下论文列出5-10个理解本文必需的术语。每行格式为“- 术语：在本文中的具体含义或作用”。"
+            "只解释本文语境，不写通用百科定义，不要标题。\n"
+            f"标题：{title}\n摘要：{abstract_en[:1500]}\n正文片段：{pdf_text[:6000]}"
+        )
+        analysis["glossary"] = normalize_glossary(
+            call_llm(glossary_prompt, max_tokens=900, timeout=150)
+        )
 
     if not analysis.get("abstract_zh"):
         analysis["abstract_zh"] = translate_text(abstract_en)

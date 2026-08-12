@@ -336,6 +336,8 @@ def process_paper(
 
     # Markdown 可读性优化
     qa_md = {f"q{i}": format_answer_md(analysis.get(f"q{i}", "")) for i in range(1, 11)}
+    flowchart_md = analysis.get("flowchart", "").strip()
+    glossary_md = analysis.get("glossary", "").strip()
 
     venue = str(publication.get("venue") or "-")
     publication_year = str(publication.get("year") or "-")
@@ -381,36 +383,50 @@ def process_paper(
 
 ---
 
-## ❓ 10 问题深度分析
+## 🗺️ 方法流程图
 
-### Q1: 本文解决哪个 MOT 问题？
+```mermaid
+{flowchart_md}
+```
+
+---
+
+## 📖 关键术语
+
+{glossary_md}
+
+---
+
+## 🧩 从直觉到实现：10 步读懂方法
+
+### Q1: 一句话讲清：输入、输出与核心变化
 {qa_md.get('q1', '分析中...')}
 
-### Q2: 相关跟踪技术路线？
+### Q2: 为什么需要它：旧方法如何失败
 {qa_md.get('q2', '分析中...')}
 
-### Q3: 现有方法的局限性？
+### Q3: 完整流程：视频如何变成轨迹
 {qa_md.get('q3', '分析中...')}
 
-### Q4: 整体跟踪流程？
+### Q4: 核心创新模块如何实现
 {qa_md.get('q4', '分析中...')}
 
-### Q5: 检测、运动与关联设计？
+### Q5: 其余模块、数据关联与轨迹管理
 {qa_md.get('q5', '分析中...')}
 
-### Q6: 主要贡献与消融结论？
+### Q6: 如何训练，推理时保留什么
 {qa_md.get('q6', '分析中...')}
 
-### Q7: 数据集、指标与实验结果？
+### Q7: 连续三帧实例：ID 如何保持
 {qa_md.get('q7', '分析中...')}
 
-### Q8: 开源与可复现性？
+### Q8: 实验真正证明了什么
 {qa_md.get('q8', '分析中...')}
 
-### Q9: 客观评价？
+### Q9: 复现与实现清单
 {qa_md.get('q9', '分析中...')}
 
-### Q10: 失效模式与批判审视？
+### Q10: 与主流路线相比的新增点、代价与边界
 {qa_md.get('q10', '分析中...')}
 
 ---

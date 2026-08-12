@@ -34,9 +34,18 @@ class QualityGatePlaceholderTest(unittest.TestCase):
             f"q{i}": "该回答围绕未知室内环境中的无人机自主探索，说明问题、方法和实验结论。"
             for i in range(1, 11)
         }
-        analysis["q4"] = (
-            "The core idea targets Unknown Indoor Environments by combining semantic mapping "
-            "with frontier-based exploration and probabilistic roadmaps."
+        for i in range(3, 8):
+            analysis[f"q{i}"] = (
+                "该方法接收连续视频帧和检测结果，先提取目标外观与运动信息，再通过论文定义的核心模块计算跨帧关系。"
+                "模块把关系分数输出给数据关联阶段，随后完成检测与已有轨迹的匹配，并更新已匹配轨迹、保留短时未匹配轨迹。"
+                "训练阶段使用论文给出的监督约束学习特征，推理阶段按匹配结果输出带有稳定身份编号的轨迹。"
+            )
+        analysis["flowchart"] = (
+            "flowchart LR\nA[视频帧] --> B[检测与特征]\nB --> C[核心模块]\n"
+            "C --> D[数据关联]\nD --> E[轨迹更新]\nE --> F[轨迹输出]"
+        )
+        analysis["glossary"] = "\n".join(
+            [f"- 术语{i}：本文方法中的具体作用{i}" for i in range(1, 6)]
         )
 
         ok, errors = quality_gate(

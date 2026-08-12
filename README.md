@@ -12,7 +12,7 @@ MOT-PaperClaw 从 [RS-PaperClaw](https://github.com/thinson/RS-PaperClaw) 改造
 
 ## 2026 顶会顶刊每日精选
 
-定时工作流每天北京时间 09:30 刷新候选池，并从尚未解读的论文中选择 1 篇进行 10 问深度分析。目标 venue 包括 CVPR、ICCV、ECCV、NeurIPS（NIPS）、ICMR、ICML、AAAI、TPAMI、TIP、IJCV、TCSVT、Pattern Recognition 和 ACM MM。
+定时工作流每天北京时间 09:30 刷新候选池，并从尚未解读的论文中选择 1 篇进行递进式方法解读。目标 venue 包括 CVPR、ICCV、ECCV、NeurIPS（NIPS）、ICMR、ICML、AAAI、TPAMI、TIP、IJCV、TCSVT、Pattern Recognition 和 ACM MM。
 
 候选必须满足：2026 年正式 venue 元数据、明确的 MOT 研究信号，以及可供全文处理的 arXiv ID 或来源核验的公开 PDF。候选队列持久化在 `papers/top_venue_queue_2026.json`；尚未公布论文列表或没有公开全文的 venue 不会用未核验预印本补位。
 
@@ -40,8 +40,9 @@ python3 scripts/cli.py top-venue
 |---|---|
 | 候选发现 | 使用 MOT 专用 arXiv 查询词与强证据 regex |
 | 语义复筛 | LLM 判断是否真正维持多实体身份与轨迹 |
-| 单篇报告 | TL;DR、中文摘要、MOT 受控标签、首页预览、10 问深度分析 |
-| 实验解读 | 区分 HOTA、IDF1、MOTA/AMOTA，关注数据集、协议、速度与消融 |
+| 单篇报告 | TL;DR、中文摘要、首页预览、方法流程图、术语表、10 步递进解读 |
+| 方法解读 | 按输入、运算、输出解释模块，拆分训练与推理，并用三帧实例走完整流程 |
+| 实验解读 | 建立组件变化、指标变化与结论的对应，区分 HOTA、IDF1、MOTA/AMOTA |
 | 日报与归档 | GitHub Issue + `daily_reports/YYYYMM/YYYYMMDD.md` |
 | 通知 | 可选飞书/钉钉推送 |
 
