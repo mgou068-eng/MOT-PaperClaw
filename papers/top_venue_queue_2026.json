@@ -1,0 +1,92 @@
+{
+  "year": 2026,
+  "venues": [
+    "CVPR",
+    "ICCV",
+    "ECCV",
+    "NeurIPS",
+    "ICMR",
+    "ICML",
+    "AAAI",
+    "TPAMI",
+    "TIP",
+    "IJCV",
+    "TCSVT",
+    "PR",
+    "ACM MM"
+  ],
+  "updated_at": "2026-08-12T01:47:14+00:00",
+  "items": [
+    {
+      "candidate_id": "doi:10.1609/aaai.v40i6.42500",
+      "arxiv_id": "",
+      "pdf_url": "https://doi.org/10.1609/aaai.v40i6.42500",
+      "title": "GLoMOT: Efficient Online GNN-based Low-Frame-Rate Multi-Object Tracker",
+      "venue": "AAAI",
+      "venue_raw": "AAAI Conference on Artificial Intelligence",
+      "year": 2026,
+      "publication_date": "2026-03-14",
+      "doi": "10.1609/aaai.v40i6.42500",
+      "semantic_scholar_url": "https://www.semanticscholar.org/paper/4214e29359f18099ac9db29918a4843200f91613",
+      "citation_count": 0,
+      "status": "retry",
+      "last_error": "PDF 下载失败"
+    },
+    {
+      "candidate_id": "doi:10.1609/aaai.v40i4.37301",
+      "arxiv_id": "",
+      "pdf_url": "https://ojs.aaai.org/index.php/AAAI/article/download/37301/41263",
+      "title": "SAM2-OV: A Novel Detection-Only Tuning Paradigm for Open-Vocabulary Multi-Object Tracking",
+      "venue": "AAAI",
+      "venue_raw": "AAAI Conference on Artificial Intelligence",
+      "year": 2026,
+      "publication_date": "2026-03-14",
+      "doi": "10.1609/aaai.v40i4.37301",
+      "semantic_scholar_url": "https://www.semanticscholar.org/paper/bfdcfcc11a8a1b76c7344c72a9aa598887ac485b",
+      "citation_count": 0,
+      "status": "pending"
+    },
+    {
+      "candidate_id": "doi:10.1016/j.patcog.2026.114038",
+      "arxiv_id": "",
+      "pdf_url": "https://arxiv.org/pdf/2509.14060",
+      "title": "VSE-MOT: Multi-object tracking in low-quality video scenes guided by visual semantic enhancement",
+      "venue": "PR",
+      "venue_raw": "Pattern Recognition",
+      "year": 2026,
+      "publication_date": "2026-05-01",
+      "doi": "10.1016/j.patcog.2026.114038",
+      "semantic_scholar_url": "https://www.semanticscholar.org/paper/c488541bcd0db40cac3f769ab56d8bfebf54bf10",
+      "citation_count": 0,
+      "status": "pending"
+    },
+    {
+      "candidate_id": "doi:10.1145/3805622.3810875",
+      "arxiv_id": "",
+      "pdf_url": "https://doi.org/10.1145/3805622.3810875",
+      "title": "Robust Exemplar Prompt Learning via Bi-directional Visual-Semantic Alignment for Multi-Object Tracking",
+      "venue": "ICMR",
+      "venue_raw": "International Conference on Multimedia Retrieval",
+      "year": 2026,
+      "publication_date": "2026-06-15",
+      "doi": "10.1145/3805622.3810875",
+      "semantic_scholar_url": "https://www.semanticscholar.org/paper/1cd352823d7afe371c17656e18a828cab99edc18",
+      "citation_count": 0,
+      "status": "pending"
+    },
+    {
+      "candidate_id": "doi:10.1145/3805622.3810848",
+      "arxiv_id": "",
+      "pdf_url": "https://doi.org/10.1145/3805622.3810848",
+      "title": "SGFR-Track: Uncertainty-Gated Spectral Feature Restoration for Online Multi-Object Tracking",
+      "venue": "ICMR",
+      "venue_raw": "International Conference on Multimedia Retrieval",
+      "year": 2026,
+      "publication_date": "2026-06-15",
+      "doi": "10.1145/3805622.3810848",
+      "semantic_scholar_url": "https://www.semanticscholar.org/paper/6de7f8a500768c6b85e4f1764c0c0bf0f51bc83e",
+      "citation_count": 0,
+      "status": "pending"
+    }
+  ]
+}
