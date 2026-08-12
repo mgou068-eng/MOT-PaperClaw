@@ -10,6 +10,7 @@ import paper_processor
 import reconcile_daily_issue_set
 import run_mot_daily_workday
 import sync_daily_reports_to_repo
+import top_venue_daily
 from services.issue_index import rebuild_index, save_index
 from pipeline_config import get_repo, load_config
 
@@ -57,6 +58,10 @@ def build_parser() -> argparse.ArgumentParser:
     paper_parser.add_argument("--dry-run", action="store_true", help="仅在本地生成结果，不更新 GitHub issue")
     paper_parser.add_argument("--output-dir", dest="output_dir", help="dry-run 输出目录")
     paper_parser.set_defaults(func=paper_command)
+
+    top_venue_parser = subparsers.add_parser("top-venue", help="每天解读一篇 2026 顶会顶刊 MOT 论文")
+    top_venue_parser.add_argument("--cached", action="store_true", help="仅使用已缓存候选，不刷新来源")
+    top_venue_parser.set_defaults(func=lambda args: top_venue_daily.main(refresh=not args.cached))
 
     rebuild_parser = subparsers.add_parser("rebuild-index", help="重建 issue 索引")
     rebuild_parser.set_defaults(func=rebuild_index_command)

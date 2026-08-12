@@ -1,0 +1,26 @@
+{
+  "year": 2026,
+  "venues": {
+    "CVPR": ["computer vision and pattern recognition", "cvpr"],
+    "ICCV": ["international conference on computer vision", "iccv"],
+    "ECCV": ["european conference on computer vision", "eccv"],
+    "NeurIPS": ["neural information processing systems", "neurips", "nips"],
+    "ICMR": ["international conference on multimedia retrieval", "icmr"],
+    "ICML": ["international conference on machine learning", "icml"],
+    "AAAI": ["aaai conference on artificial intelligence", "aaai"],
+    "TPAMI": ["transactions on pattern analysis and machine intelligence", "tpami", "t-pami"],
+    "TIP": ["transactions on image processing", "tip"],
+    "IJCV": ["international journal of computer vision", "ijcv"],
+    "TCSVT": ["transactions on circuits and systems for video technology", "tcsvt"],
+    "PR": ["pattern recognition"],
+    "ACM MM": ["acm international conference on multimedia", "acm multimedia", "acm mm"]
+  },
+  "queries": [
+    "multi-object tracking",
+    "multiple object tracking",
+    "multi-target tracking",
+    "multi-camera multi-object tracking",
+    "3D multi-object tracking",
+    "referring multi-object tracking"
+  ]
+}

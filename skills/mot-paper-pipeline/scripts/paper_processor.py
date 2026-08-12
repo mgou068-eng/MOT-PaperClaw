@@ -14,6 +14,7 @@ import re
 from pathlib import Path
 from datetime import datetime
 import json
+import urllib.request
 
 from clients.arxiv_client import download_pdf, download_source, extract_abs_info
 from pipeline_config import get_repo, load_config
@@ -45,9 +46,31 @@ def log_step(step: str, status: str, reason: str = ""):
 def _institution_count(text: str) -> int:
     return len([chunk for chunk in re.split(r"[；;]", text or "") if chunk.strip()])
 
+
+def _safe_paper_id(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]+", "_", value).strip("_") or "paper"
+
+
+def _download_public_pdf(url: str, paper_id: str) -> Path | None:
+    if not url:
+        return None
+    output = CONFIG.temp_dir / f"{_safe_paper_id(paper_id)}.pdf"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": CONFIG.arxiv_user_agent})
+        with urllib.request.urlopen(req, timeout=90) as response:
+            data = response.read()
+        if not data.startswith(b"%PDF"):
+            raise RuntimeError("response is not a PDF")
+        output.write_bytes(data)
+        return output
+    except Exception as exc:
+        log_step("STEP-1", "FAILED", f"公开 PDF 下载失败: {exc}")
+        return None
+
 def handle_figures(arxiv_id: str, pdf_path: Path, repo=None) -> list:
     """将 PDF 前三页转 JPG 并上传，返回已上传页码列表"""
-    arxiv_dir = FIGURES_DIR / arxiv_id
+    preview_id = _safe_paper_id(arxiv_id)
+    arxiv_dir = FIGURES_DIR / preview_id
     arxiv_dir.mkdir(parents=True, exist_ok=True)
     uploaded = []
 
@@ -66,7 +89,7 @@ def handle_figures(arxiv_id: str, pdf_path: Path, repo=None) -> list:
             elif not jpg_path.exists():
                 continue
 
-            dest = f"papers/previews/{arxiv_id}/page_{page}.jpg"
+            dest = f"papers/previews/{preview_id}/page_{page}.jpg"
             if repo is not None:
                 with open(jpg_path, 'rb') as f:
                     content = f.read()
@@ -83,23 +106,42 @@ def handle_figures(arxiv_id: str, pdf_path: Path, repo=None) -> list:
 
 # ============ 主流程 ============
 
-def process_paper(arxiv_id: str, issue_number: int | None = None, dry_run: bool = False, output_dir: str | None = None, target_date: str | None = None):
+def process_paper(
+    arxiv_id: str,
+    issue_number: int | None = None,
+    dry_run: bool = False,
+    output_dir: str | None = None,
+    target_date: str | None = None,
+    publication: dict | None = None,
+):
     print(f"\n{'='*60}")
     print(f"处理论文: {arxiv_id}")
     print(f"{'='*60}")
 
     repo = None if dry_run else get_repo(CONFIG)
+    publication = publication or {}
+    real_arxiv_id = arxiv_id if not arxiv_id.startswith(("doi:", "s2:")) else ""
 
     log_step("STEP-1", "RUNNING", "信息获取")
     
-    # 1.1 下载 PDF
-    pdf_path, pdf_ok = download_pdf(arxiv_id)
+    # 1.1 下载 PDF。正式记录没有 arXiv ID 时使用来源提供的公开 PDF。
+    if real_arxiv_id:
+        pdf_path, pdf_ok = download_pdf(real_arxiv_id)
+    else:
+        pdf_path = _download_public_pdf(str(publication.get("pdf_url") or ""), arxiv_id)
+        pdf_ok = pdf_path is not None
     if not pdf_ok:
         log_step("STEP-1", "FAILED", "PDF 下载失败")
         return None, "PDF 下载失败"
 
     # 1.2 提取 abs 信息
-    info = extract_abs_info(arxiv_id)
+    info = extract_abs_info(real_arxiv_id) if real_arxiv_id else {
+        "title": str(publication.get("title") or "Unknown"),
+        "authors": "待提取",
+        "institutions": "待提取",
+        "abstract_en": "",
+        "date": str(publication.get("year") or datetime.now().year),
+    }
     log_step("STEP-1", "OK", f"title={info['title'][:40]} | authors={info['authors'][:30]}")
 
     first_page_text = ""
@@ -143,7 +185,7 @@ def process_paper(arxiv_id: str, issue_number: int | None = None, dry_run: bool 
     pdf_institutions = extract_institutions_from_first_page(info["title"], info["authors"], first_page_text)
     source_institutions = ""
     if not is_valid_institution_text(info.get("institutions", "")):
-        source_path = download_source(arxiv_id)
+        source_path = download_source(real_arxiv_id) if real_arxiv_id else None
         source_institutions = extract_institutions_from_latex_source(source_path)
 
     if is_valid_institution_text(source_institutions) and (
@@ -198,7 +240,8 @@ def process_paper(arxiv_id: str, issue_number: int | None = None, dry_run: bool 
         cols = []
         for p in [1, 2, 3]:
             if p in uploaded:
-                cols.append(f"<td><img src=\"{CONFIG.raw_content_base}/papers/previews/{arxiv_id}/page_{p}.jpg\" width=\"100%\"/><br/>Page {p}</td>")
+                preview_id = _safe_paper_id(arxiv_id)
+                cols.append(f"<td><img src=\"{CONFIG.raw_content_base}/papers/previews/{preview_id}/page_{p}.jpg\" width=\"100%\"/><br/>Page {p}</td>")
             else:
                 cols.append("<td>Page missing</td>")
         img_section = "<table><tr>" + "".join(cols) + "</tr></table>"
@@ -211,6 +254,17 @@ def process_paper(arxiv_id: str, issue_number: int | None = None, dry_run: bool 
     # Markdown 可读性优化
     qa_md = {f"q{i}": format_answer_md(analysis.get(f"q{i}", "")) for i in range(1, 11)}
 
+    venue = str(publication.get("venue") or "-")
+    publication_year = str(publication.get("year") or "-")
+    doi = str(publication.get("doi") or "-")
+    source_url = str(publication.get("source_url") or "")
+    source_value = f"[Semantic Scholar]({source_url})" if source_url else "-"
+    fulltext_value = (
+        f"[abs](https://arxiv.org/abs/{real_arxiv_id}) \\| [pdf](https://arxiv.org/pdf/{real_arxiv_id})"
+        if real_arxiv_id
+        else f"[公开 PDF]({publication.get('pdf_url')})"
+    )
+
     report = f"""# [{title_date}] {info['title']}
 
 ## 📋 基础信息
@@ -221,7 +275,11 @@ def process_paper(arxiv_id: str, issue_number: int | None = None, dry_run: bool 
 | **作者** | {info['authors']} |
 | **单位** | {info['institutions']} |
 | **日期** | {date_str} |
-| **arXiv** | [abs](https://arxiv.org/abs/{arxiv_id}) \\| [pdf](https://arxiv.org/pdf/{arxiv_id}) |
+| **Venue** | {venue} |
+| **发表年份** | {publication_year} |
+| **DOI** | {doi} |
+| **Venue 来源** | {source_value} |
+| **全文** | {fulltext_value} |
 | **TL;DR** | {tldr} |
 | **摘要** | {abstract_short} |
 | **标签** | {', '.join([title_date] + tags)} |

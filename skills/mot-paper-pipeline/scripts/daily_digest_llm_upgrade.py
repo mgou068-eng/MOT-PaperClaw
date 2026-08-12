@@ -75,7 +75,8 @@ def _augment_papers_from_stats(repo, papers: list[dict], stats: dict | None) -> 
         return papers
 
     selected_ids = stats.get("successful_selected_arxiv_ids") or []
-    if not selected_ids:
+    selected_issue_numbers = stats.get("successful_issue_numbers") or []
+    if not selected_ids and not selected_issue_numbers:
         return papers
 
     index = ensure_index(repo)
@@ -85,6 +86,17 @@ def _augment_papers_from_stats(repo, papers: list[dict], stats: dict | None) -> 
         if _paper_key(paper) is not None
     }
     merged = list(papers)
+
+    for issue_number in selected_issue_numbers:
+        try:
+            issue = repo.get_issue(int(issue_number))
+        except Exception:
+            continue
+        raw = issue_data(issue)
+        _merge_paper(merged, raw)
+        number = _paper_key(raw)
+        if number is not None:
+            by_issue_number[number] = raw
 
     for arxiv_id in selected_ids:
         issue = lookup_issue(repo, index, arxiv_id)

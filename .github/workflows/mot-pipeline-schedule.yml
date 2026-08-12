@@ -3,7 +3,7 @@ name: MOT Pipeline Schedule
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 1,4,7 * * 1-5"
+    - cron: "30 1 * * *"
 
 concurrency:
   group: mot-pipeline-schedule
@@ -39,6 +39,7 @@ jobs:
           sparse-checkout: |
             skills/mot-paper-pipeline
             papers/issue_index.json
+            papers/top_venue_queue_2026.json
           sparse-checkout-cone-mode: false
 
       - name: Set up Python
@@ -63,15 +64,7 @@ jobs:
 
       - name: Run scheduled pipeline
         working-directory: skills/mot-paper-pipeline
-        run: |
-          set -euo pipefail
-          if [[ -n "${DINGTALK_WEBHOOK:-}" || -n "${FEISHU_TARGET:-}" ]]; then
-            echo "MODE run"
-            python3 scripts/cli.py run
-          else
-            echo "MODE run --no-notify"
-            python3 scripts/cli.py run --no-notify
-          fi
+        run: python3 scripts/cli.py top-venue
 
       - name: Print pipeline state
         if: always()

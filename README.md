@@ -10,6 +10,19 @@ arXiv -> 单篇深读 Issue -> 每日汇总 -> GitHub Pages 阅读页
 
 MOT-PaperClaw 从 [RS-PaperClaw](https://github.com/thinson/RS-PaperClaw) 改造而来，已将论文发现、语义筛选、分析提示、标签体系、日报和前端全部切换为多目标跟踪领域。
 
+## 2026 顶会顶刊每日精选
+
+定时工作流每天北京时间 09:30 刷新候选池，并从尚未解读的论文中选择 1 篇进行 10 问深度分析。目标 venue 包括 CVPR、ICCV、ECCV、NeurIPS（NIPS）、ICMR、ICML、AAAI、TPAMI、TIP、IJCV、TCSVT、Pattern Recognition 和 ACM MM。
+
+候选必须满足：2026 年正式 venue 元数据、明确的 MOT 研究信号，以及可供全文处理的 arXiv ID 或来源核验的公开 PDF。候选队列持久化在 `papers/top_venue_queue_2026.json`；尚未公布论文列表或没有公开全文的 venue 不会用未核验预印本补位。
+
+手动运行：
+
+```bash
+cd skills/mot-paper-pipeline
+python3 scripts/cli.py top-venue
+```
+
 ## 范围
 
 收录：
