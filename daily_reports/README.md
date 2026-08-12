@@ -2,6 +2,36 @@
 
 最近三天日报（最新在前）：
 
+# [20260812](./202608/20260812.md)
+## 📌 今日概况
+
+今日共检索候选论文 1 篇；关键词+LLM 智能匹配 MOT 论文 1 篇；最终纳入日报 1 篇。
+
+今日研究聚焦低质量视频场景下的多目标跟踪，提出视觉语义增强方法VSE-MOT。该方法属于Tracking-by-Detection范式，通过视觉语义信息引导运动建模，以应对遮挡和画质退化带来的挑战。研究延续了2D MOT领域对鲁棒性和准确性的追求，旨在提升复杂场景下的跟踪性能，反映了当前对实际应用场景中数据质量问题的关注。
+
+## ✨ 今日亮点
+
+- 针对低质量视频场景提出视觉语义增强跟踪方法
+- 结合运动建模与语义信息应对遮挡问题
+- 延续Tracking-by-Detection范式提升鲁棒性
+
+## 🗂 今日文章列表
+
+| 标题 | 作者 | 单位 | 一句话概括 | Issue |
+|---|---|---|---|---|
+| [20260812] VSE-MOT: Multi-object tracking in low-quality video scenes guided by visual semantic enhancement | Du Jun, Xing Weiwei, Li Ming, Fei Richard Yu | a School of Software Engineering, Beijing Jiaotong University, Beijing, 100044, China；b Guangdong Laboratory of Artificial Intelligence and Digital Economy, Shenzhen, 518083, China | 提出VSE-MOT，通过视觉语义增强引导运动建模，提升低质量视频下的多目标跟踪性能。 | [#6](https://github.com/mgou068-eng/MOT-PaperClaw/issues/6) |
+
+## 🔎 观察
+
+- 低质量视频跟踪成为新关注点，视觉语义增强是应对画质退化的有效思路。
+- 运动建模与语义信息结合，或为遮挡处理提供新范式，但需更多实验验证。
+
+---
+
+Powered by OpenClaw🦞
+
+---
+
 # [20260810](./202608/20260810.md)
 ## 📌 今日概况
 
@@ -33,24 +63,6 @@ Powered by OpenClaw🦞
 ---
 
 # [20260809](./202608/20260809.md)
-## 📌 今日概况
-
-今日共检索候选论文 0 篇；关键词+LLM 智能匹配 MOT 论文 0 篇；最终纳入日报 0 篇。
-
-当日未检索到符合条件并纳入日报的论文。
-
-## 🔎 观察
-
-- 当日无成功纳入论文，建议优先检查候选筛选结果与失败原因。
-- 若连续出现空日报，应复核 arXiv 日期窗口、关键词配置与 LLM 筛选输出。
-
----
-
-Powered by OpenClaw🦞
-
----
-
-# [20260808](./202608/20260808.md)
 ## 📌 今日概况
 
 今日共检索候选论文 0 篇；关键词+LLM 智能匹配 MOT 论文 0 篇；最终纳入日报 0 篇。
