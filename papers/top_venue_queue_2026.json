@@ -44,7 +44,9 @@
       "doi": "10.1016/j.patcog.2026.114038",
       "semantic_scholar_url": "https://www.semanticscholar.org/paper/c488541bcd0db40cac3f769ab56d8bfebf54bf10",
       "citation_count": 0,
-      "status": "pending"
+      "status": "published",
+      "issue_number": 6,
+      "published_at": "2026-08-12T01:56:24+00:00"
     },
     {
       "candidate_id": "doi:10.1145/3805622.3810875",
