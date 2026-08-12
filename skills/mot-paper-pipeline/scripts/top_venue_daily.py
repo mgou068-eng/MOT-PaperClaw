@@ -190,10 +190,13 @@ def save_queue(repo, queue: dict) -> None:
     upsert_repo_file(repo, QUEUE_PATH, body, "refresh 2026 top venue MOT queue")
 
 
-def choose_candidate(queue: dict, existing_ids: set[str]) -> dict | None:
+def choose_candidate(queue: dict, existing_ids: set[str], attempted: set[str] | None = None) -> dict | None:
+    attempted = attempted or set()
     for item in queue.get("items") or []:
         if item.get("arxiv_id") and item.get("arxiv_id") in existing_ids:
             item["status"] = "published"
+            continue
+        if item.get("candidate_id") in attempted:
             continue
         if item.get("status") in {None, "pending", "retry"}:
             return item
@@ -232,33 +235,45 @@ def main(refresh: bool = True) -> int:
             print(f"DISCOVERY_WARNING {exc}; using cached queue")
 
     existing_ids = load_existing_arxiv_ids(repo)
-    candidate = choose_candidate(queue, existing_ids)
-    if candidate is None:
-        save_queue(repo, queue or merge_queue({}, [], config))
-        print("NO_ELIGIBLE_TOP_VENUE_PAPER")
-        return 0
+    attempted: set[str] = set()
+    failures: list[str] = []
+    result = None
+    candidate = None
+    while True:
+        candidate = choose_candidate(queue, existing_ids, attempted)
+        if candidate is None:
+            save_queue(repo, queue or merge_queue({}, [], config))
+            if failures:
+                raise RuntimeError("all eligible papers failed: " + " | ".join(failures))
+            print("NO_ELIGIBLE_TOP_VENUE_PAPER")
+            return 0
 
-    print(
-        f"SELECTED {candidate['candidate_id']} | {candidate['venue']} {candidate['year']} | "
-        f"{candidate['title']}"
-    )
-    result, error = process_paper(
-        candidate.get("arxiv_id") or candidate["candidate_id"],
-        target_date=today,
-        publication={
-            "venue": candidate["venue"],
-            "year": candidate["year"],
-            "doi": candidate.get("doi") or "",
-            "source_url": candidate.get("semantic_scholar_url") or "",
-            "pdf_url": candidate.get("pdf_url") or "",
-            "title": candidate.get("title") or "",
-        },
-    )
-    if result is None:
+        attempted.add(candidate["candidate_id"])
+        print(
+            f"SELECTED {candidate['candidate_id']} | {candidate['venue']} {candidate['year']} | "
+            f"{candidate['title']}"
+        )
+        result, error = process_paper(
+            candidate.get("arxiv_id") or candidate["candidate_id"],
+            target_date=today,
+            publication={
+                "venue": candidate["venue"],
+                "year": candidate["year"],
+                "doi": candidate.get("doi") or "",
+                "source_url": candidate.get("semantic_scholar_url") or "",
+                "pdf_url": candidate.get("pdf_url") or "",
+                "title": candidate.get("title") or "",
+            },
+        )
+        if result is not None:
+            break
+
         candidate["status"] = "retry"
         candidate["last_error"] = error or "unknown error"
+        failure = f"{candidate['candidate_id']}: {candidate['last_error']}"
+        failures.append(failure)
+        print(f"SKIP_FAILED {failure}")
         save_queue(repo, queue)
-        raise RuntimeError(f"paper processing failed: {candidate['last_error']}")
 
     candidate["status"] = "published"
     candidate["issue_number"] = result.number

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -16,6 +17,7 @@ from top_venue_daily import (
     extract_arxiv_id,
     is_mot_candidate,
 )
+from paper_processor import _download_public_pdf, _extract_pdf_links
 
 
 VENUES = {
@@ -84,6 +86,36 @@ class TopVenueDailyTest(unittest.TestCase):
         chosen = choose_candidate(queue, {"2601.00001"})
         self.assertEqual(chosen["arxiv_id"], "2601.00002")
         self.assertEqual(queue["items"][0]["status"], "published")
+
+    def test_skips_candidate_already_attempted_in_same_run(self):
+        queue = {
+            "items": [
+                {"candidate_id": "doi:first", "status": "retry"},
+                {"candidate_id": "doi:second", "status": "pending"},
+            ]
+        }
+        chosen = choose_candidate(queue, set(), {"doi:first"})
+        self.assertEqual(chosen["candidate_id"], "doi:second")
+
+    def test_extracts_ojs_pdf_link(self):
+        html = b'<a href="https://ojs.aaai.org/index.php/AAAI/article/view/42500/46461">PDF</a>'
+        self.assertEqual(
+            _extract_pdf_links(html, "https://ojs.aaai.org/index.php/AAAI/article/view/42500"),
+            ["https://ojs.aaai.org/index.php/AAAI/article/view/42500/46461"],
+        )
+
+    @patch("paper_processor._request_bytes")
+    @patch("paper_processor._curl_fetch")
+    def test_download_follows_pdf_link_from_curl_html(self, curl_fetch, request_bytes):
+        request_bytes.side_effect = RuntimeError("blocked")
+        curl_fetch.side_effect = [
+            (b'<a href="/paper.pdf">PDF</a>', "https://example.test/article"),
+            (b"%PDF-1.7\nexample", "https://example.test/paper.pdf"),
+        ]
+        path, resolved = _download_public_pdf("https://example.test/article", "doi:test")
+        self.assertIsNotNone(path)
+        self.assertEqual(resolved, "https://example.test/paper.pdf")
+        path.unlink()
 
     def test_detects_top_venue_paper_already_published_today(self):
         class Repo:

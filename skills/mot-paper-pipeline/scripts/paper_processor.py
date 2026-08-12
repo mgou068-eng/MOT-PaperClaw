@@ -11,10 +11,13 @@ from __future__ import annotations
 import subprocess
 import glob
 import re
+import time
 from pathlib import Path
 from datetime import datetime
 import json
+import html
 import urllib.request
+import urllib.parse
 
 from clients.arxiv_client import download_pdf, download_source, extract_abs_info
 from pipeline_config import get_repo, load_config
@@ -51,21 +54,99 @@ def _safe_paper_id(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "_", value).strip("_") or "paper"
 
 
-def _download_public_pdf(url: str, paper_id: str) -> Path | None:
+def _request_bytes(url: str, timeout: int = 90) -> tuple[bytes, str, str]:
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36",
+        "Accept": "application/pdf,text/html;q=0.9,*/*;q=0.8",
+        "Accept-Encoding": "identity",
+    }
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=timeout) as response:
+        return response.read(), response.geturl(), response.headers.get_content_type()
+
+
+def _extract_pdf_links(body: bytes, base_url: str) -> list[str]:
+    text = body.decode("utf-8", errors="ignore")
+    links: list[str] = []
+    patterns = [
+        r'<meta[^>]+name=["\']citation_pdf_url["\'][^>]+content=["\']([^"\']+)',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']citation_pdf_url["\']',
+    ]
+    for pattern in patterns:
+        for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+            resolved = urllib.parse.urljoin(base_url, html.unescape(match.group(1)))
+            if resolved not in links:
+                links.append(resolved)
+    for match in re.finditer(r'href=["\']([^"\']+)["\']', text, flags=re.IGNORECASE):
+        raw_link = html.unescape(match.group(1))
+        path = urllib.parse.urlparse(raw_link).path.lower()
+        if "/article/view/" not in path and "/article/download/" not in path and not path.endswith(".pdf"):
+            continue
+        resolved = urllib.parse.urljoin(base_url, raw_link)
+        if resolved not in links:
+            links.append(resolved)
+    return links
+
+
+def _curl_fetch(url: str) -> tuple[bytes, str]:
+    result = subprocess.run(
+        [
+            "curl",
+            "-k",
+            "-sS",
+            "-L",
+            "--compressed",
+            "--retry",
+            "2",
+            "--retry-all-errors",
+            "--max-time",
+            "90",
+            "-w",
+            "\n%{url_effective}",
+            url,
+        ],
+        check=True,
+        capture_output=True,
+    )
+    data, separator, effective_url = result.stdout.rpartition(b"\n")
+    return (data if separator else result.stdout), effective_url.decode("utf-8", errors="ignore")
+
+
+def _download_public_pdf(url: str, paper_id: str) -> tuple[Path | None, str]:
     if not url:
-        return None
+        return None, ""
     output = CONFIG.temp_dir / f"{_safe_paper_id(paper_id)}.pdf"
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": CONFIG.arxiv_user_agent})
-        with urllib.request.urlopen(req, timeout=90) as response:
-            data = response.read()
-        if not data.startswith(b"%PDF"):
-            raise RuntimeError("response is not a PDF")
-        output.write_bytes(data)
-        return output
-    except Exception as exc:
-        log_step("STEP-1", "FAILED", f"公开 PDF 下载失败: {exc}")
-        return None
+    pending = [url]
+    attempted: set[str] = set()
+    errors: list[str] = []
+    while pending and len(attempted) < 8:
+        current = pending.pop(0)
+        if current in attempted:
+            continue
+        attempted.add(current)
+        for attempt in range(2):
+            try:
+                data, final_url, content_type = _request_bytes(current)
+                if data.startswith(b"%PDF") or content_type == "application/pdf":
+                    output.write_bytes(data)
+                    return output, final_url
+                pending.extend(link for link in _extract_pdf_links(data, final_url) if link not in attempted)
+                errors.append(f"not PDF: {final_url}")
+                break
+            except Exception as exc:
+                errors.append(f"{current}: {exc}")
+                if attempt == 0:
+                    time.sleep(3)
+        try:
+            data, final_url = _curl_fetch(current)
+            if data.startswith(b"%PDF"):
+                output.write_bytes(data)
+                return output, final_url
+            pending.extend(link for link in _extract_pdf_links(data, final_url) if link not in attempted)
+        except Exception as exc:
+            errors.append(f"curl {current}: {exc}")
+    log_step("STEP-1", "FAILED", f"公开 PDF 下载失败: {' | '.join(errors[-3:])}")
+    return None, ""
 
 def handle_figures(arxiv_id: str, pdf_path: Path, repo=None) -> list:
     """将 PDF 前三页转 JPG 并上传，返回已上传页码列表"""
@@ -128,7 +209,9 @@ def process_paper(
     if real_arxiv_id:
         pdf_path, pdf_ok = download_pdf(real_arxiv_id)
     else:
-        pdf_path = _download_public_pdf(str(publication.get("pdf_url") or ""), arxiv_id)
+        pdf_path, resolved_pdf_url = _download_public_pdf(str(publication.get("pdf_url") or ""), arxiv_id)
+        if resolved_pdf_url:
+            publication["pdf_url"] = resolved_pdf_url
         pdf_ok = pdf_path is not None
     if not pdf_ok:
         log_step("STEP-1", "FAILED", "PDF 下载失败")
