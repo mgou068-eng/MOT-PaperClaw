@@ -13,10 +13,14 @@ if str(SCRIPTS_DIR) not in sys.path:
 from top_venue_daily import (
     _failed_item,
     already_published_today,
+    backfill_link_only_dates,
     canonical_venue,
     choose_candidate,
+    discover_candidates,
     extract_arxiv_id,
     is_mot_candidate,
+    link_only_for_date,
+    merge_queue,
 )
 from paper_processor import _curl_fetch, _download_public_pdf, _extract_pdf_links
 
@@ -109,6 +113,78 @@ class TopVenueDailyTest(unittest.TestCase):
         chosen = choose_candidate(queue, set())
 
         self.assertEqual(chosen["candidate_id"], "doi:available")
+
+    def test_merge_preserves_terminal_statuses_across_discovery_runs(self):
+        queue = {
+            "items": [
+                {"candidate_id": "doi:failed", "status": "link_only", "failed_on": "20260813"},
+                {"candidate_id": "doi:done", "status": "published", "issue_number": 8},
+            ]
+        }
+        discovered = [
+            {"candidate_id": "doi:failed", "status": "pending", "title": "Failed"},
+            {"candidate_id": "doi:done", "status": "pending", "title": "Done"},
+            {"candidate_id": "doi:new", "status": "pending", "title": "New"},
+        ]
+
+        merged = merge_queue(queue, discovered, {"year": 2026, "venues": VENUES})
+        by_id = {item["candidate_id"]: item for item in merged["items"]}
+
+        self.assertEqual(by_id["doi:failed"]["status"], "link_only")
+        self.assertEqual(by_id["doi:done"]["status"], "published")
+        self.assertEqual(by_id["doi:new"]["status"], "pending")
+
+    def test_backfills_legacy_failure_date_and_filters_by_day(self):
+        queue = {
+            "updated_at": "2026-08-13T01:51:47+00:00",
+            "items": [
+                {"candidate_id": "doi:legacy", "status": "link_only"},
+                {"candidate_id": "doi:old", "status": "link_only", "failed_on": "20260812"},
+            ],
+        }
+
+        backfill_link_only_dates(queue)
+
+        self.assertEqual(queue["items"][0]["failed_on"], "20260813")
+        self.assertEqual(
+            [item["candidate_id"] for item in link_only_for_date(queue, "20260813")],
+            ["doi:legacy"],
+        )
+
+    @patch("top_venue_daily.time.sleep")
+    @patch("top_venue_daily._fetch_json")
+    def test_discovery_follows_bulk_continuation_token(self, fetch_json, _sleep):
+        def paper(doi: str, title: str):
+            return {
+                "paperId": doi,
+                "title": title,
+                "abstract": "A multi-object tracking method for identity association.",
+                "venue": "AAAI Conference on Artificial Intelligence",
+                "year": 2026,
+                "publicationDate": "2026-03-14",
+                "externalIds": {"DOI": doi},
+                "url": f"https://example.test/{doi}",
+                "openAccessPdf": {"url": f"https://example.test/{doi}.pdf"},
+                "citationCount": 0,
+            }
+
+        fetch_json.side_effect = [
+            {"data": [paper("10.1/first", "First MOT")], "token": "next-page"},
+            {"data": [paper("10.1/second", "Second MOT")]},
+        ]
+        config = {
+            "year": 2026,
+            "venues": {"AAAI": VENUES.get("AAAI", ["aaai conference on artificial intelligence", "aaai"])},
+            "queries": ["multi-object tracking"],
+            "discovery_max_pages": 2,
+            "discovery_target": 10,
+        }
+
+        discovered = discover_candidates(config)
+
+        self.assertEqual(len(discovered), 2)
+        self.assertNotIn("token", fetch_json.call_args_list[0].args[0])
+        self.assertEqual(fetch_json.call_args_list[1].args[0]["token"], "next-page")
 
     def test_extracts_ojs_pdf_link(self):
         html = b'<a href="https://ojs.aaai.org/index.php/AAAI/article/view/42500/46461">PDF</a>'

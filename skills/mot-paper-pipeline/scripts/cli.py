@@ -59,7 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
     paper_parser.add_argument("--output-dir", dest="output_dir", help="dry-run 输出目录")
     paper_parser.set_defaults(func=paper_command)
 
-    top_venue_parser = subparsers.add_parser("top-venue", help="每天解读一篇 2026 顶会顶刊 MOT 论文")
+    top_venue_parser = subparsers.add_parser("top-venue", help="手动解读一篇 2026 顶会顶刊 MOT 论文")
     top_venue_parser.add_argument("--cached", action="store_true", help="仅使用已缓存候选，不刷新来源")
     top_venue_parser.set_defaults(func=lambda args: top_venue_daily.main(refresh=not args.cached))
 

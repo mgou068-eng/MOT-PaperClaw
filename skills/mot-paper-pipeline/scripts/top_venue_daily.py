@@ -28,6 +28,8 @@ QUEUE_PATH = "papers/top_venue_queue_2026.json"
 VENUE_CONFIG_PATH = CONFIG.root_dir / "scripts" / "config" / "top_venues_2026.json"
 S2_API = "https://api.semanticscholar.org/graph/v1/paper/search/bulk"
 S2_FIELDS = "title,abstract,venue,year,publicationDate,externalIds,url,openAccessPdf,citationCount"
+DEFAULT_DISCOVERY_MAX_PAGES = 2
+DEFAULT_DISCOVERY_TARGET = 40
 
 
 def _normalize(text: str) -> str:
@@ -115,38 +117,50 @@ def _fetch_json(params: dict[str, str], retries: int = 3) -> dict:
 
 def discover_candidates(config: dict) -> list[dict]:
     discovered: dict[str, dict] = {}
+    max_pages = max(1, int(config.get("discovery_max_pages", DEFAULT_DISCOVERY_MAX_PAGES)))
+    target_count = max(1, int(config.get("discovery_target", DEFAULT_DISCOVERY_TARGET)))
     for query in config["queries"]:
-        payload = _fetch_json(
-            {
+        token = ""
+        for page in range(max_pages):
+            params = {
                 "query": f'"{query}"',
                 "year": str(config["year"]),
                 "fields": S2_FIELDS,
                 "sort": "publicationDate:desc",
             }
-        )
-        for item in payload.get("data") or []:
-            venue = canonical_venue(item.get("venue") or "", config["venues"])
-            arxiv_id = extract_arxiv_id(item)
-            pdf_url = str((item.get("openAccessPdf") or {}).get("url") or "")
-            if item.get("year") != config["year"] or venue is None or not (arxiv_id or pdf_url):
-                continue
-            if not is_mot_candidate(item):
-                continue
-            key = candidate_id(item)
-            discovered[key] = {
-                "candidate_id": key,
-                "arxiv_id": arxiv_id or "",
-                "pdf_url": pdf_url,
-                "title": item.get("title") or "Unknown",
-                "venue": venue,
-                "venue_raw": item.get("venue") or "",
-                "year": item.get("year"),
-                "publication_date": item.get("publicationDate") or "",
-                "doi": (item.get("externalIds") or {}).get("DOI") or "",
-                "semantic_scholar_url": item.get("url") or "",
-                "citation_count": item.get("citationCount") or 0,
-                "status": "pending",
-            }
+            if token:
+                params["token"] = token
+            payload = _fetch_json(params)
+            for item in payload.get("data") or []:
+                venue = canonical_venue(item.get("venue") or "", config["venues"])
+                arxiv_id = extract_arxiv_id(item)
+                pdf_url = str((item.get("openAccessPdf") or {}).get("url") or "")
+                if item.get("year") != config["year"] or venue is None or not (arxiv_id or pdf_url):
+                    continue
+                if not is_mot_candidate(item):
+                    continue
+                key = candidate_id(item)
+                discovered[key] = {
+                    "candidate_id": key,
+                    "arxiv_id": arxiv_id or "",
+                    "pdf_url": pdf_url,
+                    "title": item.get("title") or "Unknown",
+                    "venue": venue,
+                    "venue_raw": item.get("venue") or "",
+                    "year": item.get("year"),
+                    "publication_date": item.get("publicationDate") or "",
+                    "doi": (item.get("externalIds") or {}).get("DOI") or "",
+                    "semantic_scholar_url": item.get("url") or "",
+                    "citation_count": item.get("citationCount") or 0,
+                    "status": "pending",
+                }
+            if len(discovered) >= target_count:
+                return list(discovered.values())
+            token = str(payload.get("token") or "")
+            if not token:
+                break
+            print(f"DISCOVERY_PAGE query={query!r} page={page + 2}")
+            time.sleep(1)
         time.sleep(1)
     return list(discovered.values())
 
@@ -183,6 +197,28 @@ def merge_queue(queue: dict, discovered: list[dict], config: dict) -> dict:
             ),
         ),
     }
+
+
+def backfill_link_only_dates(queue: dict) -> None:
+    """Migrate link-only records created before failed_on was introduced."""
+    updated_at = str(queue.get("updated_at") or "")
+    try:
+        queue_date = datetime.fromisoformat(updated_at.replace("Z", "+00:00")).astimezone(BEIJING_TZ).strftime("%Y%m%d")
+    except (TypeError, ValueError):
+        queue_date = ""
+    if not queue_date:
+        return
+    for item in queue.get("items") or []:
+        if item.get("status") == "link_only" and not item.get("failed_on"):
+            item["failed_on"] = queue_date
+
+
+def link_only_for_date(queue: dict, date_str: str) -> list[dict]:
+    return [
+        item.copy()
+        for item in queue.get("items") or []
+        if item.get("status") == "link_only" and item.get("failed_on") == date_str
+    ]
 
 
 def save_queue(repo, queue: dict) -> None:
@@ -286,10 +322,11 @@ def main(refresh: bool = True) -> int:
         return 0
 
     queue = load_queue(repo)
+    backfill_link_only_dates(queue)
     if refresh:
         try:
             discovered = discover_candidates(config)
-            print(f"DISCOVERED verified_with_fulltext={len(discovered)}")
+            print(f"DISCOVERED eligible_candidates={len(discovered)}")
             queue = merge_queue(queue, discovered, config)
         except Exception as exc:
             print(f"DISCOVERY_WARNING {exc}; using cached queue")
@@ -298,22 +335,17 @@ def main(refresh: bool = True) -> int:
     attempted: set[str] = set()
     failures: list[str] = []
     processing_failures: list[str] = []
-    unavailable_fulltext: list[dict] = []
     result = None
     candidate = None
     while True:
         candidate = choose_candidate(queue, existing_ids, attempted)
         if candidate is None:
             save_queue(repo, queue or merge_queue({}, [], config))
-            all_link_only = [
-                item.copy()
-                for item in queue.get("items") or []
-                if item.get("status") == "link_only"
-            ]
+            today_link_only = link_only_for_date(queue, today)
             if processing_failures:
                 raise RuntimeError("paper processing failed: " + " | ".join(processing_failures))
-            failed_items = [_failed_item(item) for item in all_link_only]
-            stats_path = _write_stats(today, len(all_link_only), [], failed_items)
+            failed_items = [_failed_item(item) for item in today_link_only]
+            stats_path = _write_stats(today, len(today_link_only), [], failed_items)
             _publish_digest(repo, today, stats_path)
             if failures:
                 print("NO_PROCESSABLE_FULLTEXT " + " | ".join(failures))
@@ -345,7 +377,7 @@ def main(refresh: bool = True) -> int:
         candidate["status"] = "link_only" if is_download_failure else "retry"
         candidate["last_error"] = error or "unknown error"
         if is_download_failure:
-            unavailable_fulltext.append(candidate.copy())
+            candidate["failed_on"] = today
         failure = f"{candidate['candidate_id']}: {candidate['last_error']}"
         failures.append(failure)
         if not is_download_failure:
@@ -357,6 +389,7 @@ def main(refresh: bool = True) -> int:
     candidate["issue_number"] = result.number
     candidate["published_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     candidate.pop("last_error", None)
+    candidate.pop("failed_on", None)
     index = ensure_index(repo)
     if candidate.get("arxiv_id"):
         update_index_from_issue(index, candidate["arxiv_id"], result)
@@ -364,10 +397,11 @@ def main(refresh: bool = True) -> int:
     save_queue(repo, queue)
     time.sleep(4)
     successful_arxiv_ids = [candidate["arxiv_id"]] if candidate.get("arxiv_id") else []
-    failed_items = [_failed_item(item) for item in unavailable_fulltext]
+    today_link_only = link_only_for_date(queue, today)
+    failed_items = [_failed_item(item) for item in today_link_only]
     stats_path = _write_stats(
         today,
-        1 + len(unavailable_fulltext),
+        1 + len(today_link_only),
         [result.number],
         failed_items,
         successful_arxiv_ids,

@@ -39,7 +39,7 @@ python3 scripts/cli.py reconcile --date YYYYMMDD --dry-run
 
 ## GitHub Actions
 
-Configure repository secrets `MOT_GITHUB_TOKEN` and `LLM_API_KEY`, plus variable `MOT_GITHUB_REPO`. The workflows are `.github/workflows/mot-pipeline-schedule.yml` and `.github/workflows/mot-pipeline-manual.yml`.
+Configure repository secrets `MOT_GITHUB_TOKEN` and `LLM_API_KEY`, plus variable `MOT_GITHUB_REPO`. Run `.github/workflows/mot-pipeline-manual.yml` manually and choose `top_venue`. No scheduled workflow is installed.
 
 ## Failure triage
 

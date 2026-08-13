@@ -12,11 +12,11 @@ MOT-PaperClaw 从 [RS-PaperClaw](https://github.com/thinson/RS-PaperClaw) 改造
 
 ## 2026 顶会顶刊每日精选
 
-定时工作流每天北京时间 09:30 刷新候选池，并从尚未解读的论文中选择 1 篇进行递进式方法解读。目标 venue 包括 CVPR、ICCV、ECCV、NeurIPS（NIPS）、ICMR、ICML、AAAI、TPAMI、TIP、IJCV、TCSVT、Pattern Recognition 和 ACM MM。
+手动工作流会刷新候选池，并从尚未处理的论文中依次尝试，直到成功解读 1 篇或耗尽新候选。目标 venue 包括 CVPR、ICCV、ECCV、NeurIPS（NIPS）、ICMR、ICML、AAAI、TPAMI、TIP、IJCV、TCSVT、Pattern Recognition 和 ACM MM。
 
 候选必须满足：2026 年正式 venue 元数据、明确的 MOT 研究信号，以及可供全文处理的 arXiv ID 或来源核验的公开 PDF。候选队列持久化在 `papers/top_venue_queue_2026.json`；尚未公布论文列表或没有公开全文的 venue 不会用未核验预印本补位。
 
-公开 PDF 若被出版站点阻断，流水线会保留 DOI、来源页和 PDF 链接，将条目标记为 `link_only`，不以摘要冒充全文解读，也不会让当天任务因此失败。定时表达式为 `30 1 * * *`，即北京时间每天 09:30；实际启动可能因 GitHub Actions 排队稍有延迟，运行日志会打印计划时间和 Runner 实际启动时间。
+公开 PDF 若被出版站点阻断，流水线会记录标题、DOI、来源页、PDF 链接和失败原因，然后继续尝试下一篇。失败条目标记为 `link_only`，成功条目标记为 `published`；后续手动运行会自动跳过这两类记录。仓库只保留手动工作流，不会自动定时运行。
 
 手动运行：
 
@@ -52,7 +52,7 @@ python3 scripts/cli.py top-venue
 
 ```text
 MOT-PaperClaw/
-|-- .github/workflows/           # 定时与手动流程
+|-- .github/workflows/           # 手动 GitHub Actions 流程
 |-- daily_reports/               # MOT 日报归档
 |-- docs/                        # GitHub Pages 阅读页
 |-- papers/issue_index.json      # arXiv ID -> Issue 索引

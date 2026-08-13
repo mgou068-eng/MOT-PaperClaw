@@ -19,8 +19,19 @@
     "multi-object tracking",
     "multiple object tracking",
     "multi-target tracking",
+    "multiple target tracking",
     "multi-camera multi-object tracking",
+    "multi-view tracking",
     "3D multi-object tracking",
-    "referring multi-object tracking"
-  ]
+    "referring multi-object tracking",
+    "tracking by detection",
+    "joint detection and tracking",
+    "data association tracking",
+    "identity association tracking",
+    "tracklet association",
+    "online object tracking HOTA",
+    "object tracking IDF1"
+  ],
+  "discovery_max_pages": 2,
+  "discovery_target": 40
 }
