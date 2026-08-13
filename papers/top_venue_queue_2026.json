@@ -15,38 +15,8 @@
     "PR",
     "ACM MM"
   ],
-  "updated_at": "2026-08-13T01:32:57+00:00",
+  "updated_at": "2026-08-13T01:51:47+00:00",
   "items": [
-    {
-      "candidate_id": "doi:10.1145/3805622.3810875",
-      "arxiv_id": "",
-      "pdf_url": "https://doi.org/10.1145/3805622.3810875",
-      "title": "Robust Exemplar Prompt Learning via Bi-directional Visual-Semantic Alignment for Multi-Object Tracking",
-      "venue": "ICMR",
-      "venue_raw": "International Conference on Multimedia Retrieval",
-      "year": 2026,
-      "publication_date": "2026-06-15",
-      "doi": "10.1145/3805622.3810875",
-      "semantic_scholar_url": "https://www.semanticscholar.org/paper/1cd352823d7afe371c17656e18a828cab99edc18",
-      "citation_count": 0,
-      "status": "retry",
-      "last_error": "PDF 下载失败"
-    },
-    {
-      "candidate_id": "doi:10.1145/3805622.3810848",
-      "arxiv_id": "",
-      "pdf_url": "https://doi.org/10.1145/3805622.3810848",
-      "title": "SGFR-Track: Uncertainty-Gated Spectral Feature Restoration for Online Multi-Object Tracking",
-      "venue": "ICMR",
-      "venue_raw": "International Conference on Multimedia Retrieval",
-      "year": 2026,
-      "publication_date": "2026-06-15",
-      "doi": "10.1145/3805622.3810848",
-      "semantic_scholar_url": "https://www.semanticscholar.org/paper/6de7f8a500768c6b85e4f1764c0c0bf0f51bc83e",
-      "citation_count": 0,
-      "status": "retry",
-      "last_error": "PDF 下载失败"
-    },
     {
       "candidate_id": "doi:10.1609/aaai.v40i6.42500",
       "arxiv_id": "",
@@ -59,7 +29,7 @@
       "doi": "10.1609/aaai.v40i6.42500",
       "semantic_scholar_url": "https://www.semanticscholar.org/paper/4214e29359f18099ac9db29918a4843200f91613",
       "citation_count": 0,
-      "status": "retry",
+      "status": "link_only",
       "last_error": "PDF 下载失败"
     },
     {
@@ -92,6 +62,36 @@
       "status": "published",
       "issue_number": 6,
       "published_at": "2026-08-12T01:56:24+00:00"
+    },
+    {
+      "candidate_id": "doi:10.1145/3805622.3810875",
+      "arxiv_id": "",
+      "pdf_url": "https://doi.org/10.1145/3805622.3810875",
+      "title": "Robust Exemplar Prompt Learning via Bi-directional Visual-Semantic Alignment for Multi-Object Tracking",
+      "venue": "ICMR",
+      "venue_raw": "International Conference on Multimedia Retrieval",
+      "year": 2026,
+      "publication_date": "2026-06-15",
+      "doi": "10.1145/3805622.3810875",
+      "semantic_scholar_url": "https://www.semanticscholar.org/paper/1cd352823d7afe371c17656e18a828cab99edc18",
+      "citation_count": 0,
+      "status": "retry",
+      "last_error": "PDF 下载失败"
+    },
+    {
+      "candidate_id": "doi:10.1145/3805622.3810848",
+      "arxiv_id": "",
+      "pdf_url": "https://doi.org/10.1145/3805622.3810848",
+      "title": "SGFR-Track: Uncertainty-Gated Spectral Feature Restoration for Online Multi-Object Tracking",
+      "venue": "ICMR",
+      "venue_raw": "International Conference on Multimedia Retrieval",
+      "year": 2026,
+      "publication_date": "2026-06-15",
+      "doi": "10.1145/3805622.3810848",
+      "semantic_scholar_url": "https://www.semanticscholar.org/paper/6de7f8a500768c6b85e4f1764c0c0bf0f51bc83e",
+      "citation_count": 0,
+      "status": "retry",
+      "last_error": "PDF 下载失败"
     }
   ]
 }
