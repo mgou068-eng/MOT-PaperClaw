@@ -11,8 +11,8 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from top_venue_daily import (
+    _failed_item,
     already_published_today,
-    build_unavailable_fulltext_report,
     canonical_venue,
     choose_candidate,
     extract_arxiv_id,
@@ -140,25 +140,21 @@ class TopVenueDailyTest(unittest.TestCase):
         self.assertEqual(data, b"%PDF-1.7\nexample")
         self.assertEqual(resolved, "https://example.test/paper.pdf")
 
-    def test_builds_link_only_report_without_claiming_analysis(self):
-        report = build_unavailable_fulltext_report(
-            "20260813",
-            [
-                {
-                    "title": "A MOT Paper",
-                    "venue": "AAAI",
-                    "year": 2026,
-                    "doi": "10.1609/test",
-                    "semantic_scholar_url": "https://example.test/paper",
-                    "pdf_url": "https://example.test/paper.pdf",
-                }
-            ],
+    def test_maps_link_only_candidate_into_digest_failure(self):
+        item = _failed_item(
+            {
+                "title": "A MOT Paper",
+                "venue": "AAAI",
+                "doi": "10.1609/test",
+                "semantic_scholar_url": "https://example.test/source",
+                "pdf_url": "https://example.test/paper.pdf",
+                "last_error": "PDF 下载失败",
+            }
         )
 
-        self.assertIn("[DOI](https://doi.org/10.1609/test)", report)
-        self.assertIn("[公开 PDF](https://example.test/paper.pdf)", report)
-        self.assertIn("未解读", report)
-        self.assertIn("`link_only`", report)
+        self.assertEqual(item["venue"], "AAAI")
+        self.assertEqual(item["source_url"], "https://example.test/source")
+        self.assertEqual(item["error"], "PDF 下载失败")
 
     def test_detects_top_venue_paper_already_published_today(self):
         class Repo:

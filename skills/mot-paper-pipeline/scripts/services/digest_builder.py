@@ -94,16 +94,17 @@ def build_digest_with_llm(date: str, papers: list, stats: dict | None = None, fa
 
         lines = [f"# 日报 {date}", "", "## 📌 今日概况", "", overview_text, ""]
         append_failed_items(lines, failed_items)
-        lines += [
-            "## 🔎 观察",
-            "",
-            "- 当日无成功纳入论文，建议优先检查候选筛选结果与失败原因。",
-            "- 若连续出现空日报，应复核 arXiv 日期窗口、关键词配置与 LLM 筛选输出。",
-            "",
-            "---",
-            "",
-            "Powered by OpenClaw🦞",
-        ]
+        if failed_items:
+            observations = [
+                "- 当日候选符合 MOT 与 venue 条件，但没有可供可靠深度解读的全文。",
+                "- 系统已保留来源链接，等待开放 PDF、arXiv 版本或后续人工补充全文。",
+            ]
+        else:
+            observations = [
+                "- 当日未发现可纳入的 2026 顶会顶刊 MOT 论文。",
+                "- 若连续出现空日报，应复核候选来源、venue 元数据和 MOT 筛选条件。",
+            ]
+        lines += ["## 🔎 观察", "", *observations, "", "---", "", "Powered by OpenClaw🦞"]
         return "\n".join(lines)
 
     prompt = (
@@ -185,14 +186,26 @@ def append_failed_items(lines: list[str], failed_items: list[dict] | None) -> No
         return
 
     lines += ["", "## ⚠️ 未纳入日报的匹配论文", ""]
-    lines.append("以下论文通过关键词/LLM 筛选，但在处理过程中失败未纳入日报。点击 arXiv 链接可查看原文。")
+    lines.append("以下论文通过筛选，但因全文不可用或处理失败而未纳入深度解读。可通过来源链接查看原始记录。")
     lines.append("")
-    lines.append("| 标题 | arXiv | 失败原因 |")
-    lines.append("|------|-------|----------|")
+    lines.append("| 标题 | Venue | 来源链接 | 未纳入原因 |")
+    lines.append("|------|-------|----------|------------|")
     for item in failed_items:
         title = item.get("title", "Unknown")
         aid = item.get("arxiv_id", "")
         error = item.get("error") or item.get("reason") or "未知"
-        arxiv_link = f"[{aid}](https://arxiv.org/abs/{aid})" if aid else "-"
-        lines.append(f"| {title} | {arxiv_link} | {error} |")
+        venue = item.get("venue") or "-"
+        links: list[str] = []
+        if aid:
+            links.append(f"[arXiv](https://arxiv.org/abs/{aid})")
+        doi = str(item.get("doi") or "").strip()
+        if doi:
+            links.append(f"[DOI](https://doi.org/{doi})")
+        source_url = str(item.get("source_url") or item.get("semantic_scholar_url") or "").strip()
+        if source_url:
+            links.append(f"[Semantic Scholar]({source_url})")
+        pdf_url = str(item.get("pdf_url") or "").strip()
+        if pdf_url:
+            links.append(f"[公开 PDF]({pdf_url})")
+        lines.append(f"| {title} | {venue} | {' · '.join(links) or '-'} | {error} |")
     lines.append("")

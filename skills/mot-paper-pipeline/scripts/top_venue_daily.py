@@ -213,61 +213,61 @@ def already_published_today(repo, date_str: str) -> bool:
     return False
 
 
-def _markdown_cell(value: object) -> str:
-    return re.sub(r"\s+", " ", str(value or "-")).replace("|", "\\|").strip()
+def _failed_item(candidate: dict) -> dict:
+    return {
+        "title": candidate.get("title") or "Unknown",
+        "arxiv_id": candidate.get("arxiv_id") or "",
+        "venue": candidate.get("venue") or "-",
+        "doi": candidate.get("doi") or "",
+        "source_url": candidate.get("semantic_scholar_url") or "",
+        "pdf_url": candidate.get("pdf_url") or "",
+        "error": candidate.get("last_error") or "公开 PDF 暂不可获取",
+    }
 
 
-def build_unavailable_fulltext_report(date_str: str, candidates: list[dict]) -> str:
-    lines = [
-        f"# MOT 全文待获取 {date_str}",
-        "",
-        "以下论文已通过 2026 顶会顶刊与 MOT 条件筛选，但 GitHub Runner 未能取得公开 PDF。",
-        "因此本次只保留来源链接，不生成摘要级的伪“全文解读”。",
-        "",
-        "| 论文 | Venue | 可用链接 | 状态 |",
-        "|---|---|---|---|",
-    ]
-    for item in candidates:
-        links: list[str] = []
-        doi = str(item.get("doi") or "").strip()
-        if doi:
-            links.append(f"[DOI](https://doi.org/{doi})")
-        source_url = str(item.get("semantic_scholar_url") or "").strip()
-        if source_url:
-            links.append(f"[Semantic Scholar]({source_url})")
-        pdf_url = str(item.get("pdf_url") or "").strip()
-        if pdf_url:
-            links.append(f"[公开 PDF]({pdf_url})")
-        lines.append(
-            "| {title} | {venue} {year} | {links} | 全文下载失败，未解读 |".format(
-                title=_markdown_cell(item.get("title")),
-                venue=_markdown_cell(item.get("venue")),
-                year=_markdown_cell(item.get("year")),
-                links=" · ".join(links) or "-",
-            )
-        )
-    lines.extend(
-        [
-            "",
-            "> 这些条目在候选队列中标记为 `link_only`，后续定时任务不会重复下载；其链接仍可手动打开。",
-        ]
+def _write_stats(
+    today: str,
+    candidate_count: int,
+    issue_numbers: list[int],
+    failed_items: list[dict],
+    arxiv_ids: list[str] | None = None,
+) -> Path:
+    stats_path = CONFIG.memory_dir / f"top_venue_stats_{today}.json"
+    stats_path.parent.mkdir(parents=True, exist_ok=True)
+    stats_path.write_text(
+        json.dumps(
+            {
+                "date": today,
+                "candidate_count": candidate_count,
+                "llm_selected_count": candidate_count,
+                "successful_selected_arxiv_ids": arxiv_ids or [],
+                "successful_issue_numbers": issue_numbers,
+                "failed_items": failed_items,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
     )
-    return "\n".join(lines) + "\n"
+    return stats_path
 
 
-def upsert_unavailable_fulltext_issue(repo, date_str: str, candidates: list[dict]):
-    if not candidates:
-        return None
-    title = f"MOT 全文待获取 {date_str}"
-    body = build_unavailable_fulltext_report(date_str, candidates)
-    for issue in repo.get_issues(state="open"):
-        if (issue.title or "").strip() == title:
-            issue.edit(title=title, body=body)
-            print(f"UPDATED_UNAVAILABLE_FULLTEXT issue=#{issue.number}")
-            return issue
-    issue = repo.create_issue(title=title, body=body)
-    print(f"CREATED_UNAVAILABLE_FULLTEXT issue=#{issue.number}")
-    return issue
+def _publish_digest(repo, today: str, stats_path: Path | None = None) -> None:
+    daily_digest_llm_upgrade.main(
+        target_date=today,
+        stats_json=str(stats_path) if stats_path else None,
+    )
+    for attempt in range(3):
+        sync_daily_reports_to_repo.main()
+        try:
+            repo.get_contents(f"daily_reports/{today[:6]}/{today}.md")
+            return
+        except Exception:
+            if attempt < 2:
+                time.sleep(6)
+
+
+def _digest_exists(repo, today: str) -> bool:
+    return any((issue.title or "").strip() == f"日报 {today}" for issue in repo.get_issues(state="open"))
 
 
 def main(refresh: bool = True) -> int:
@@ -280,6 +280,9 @@ def main(refresh: bool = True) -> int:
     config = load_venue_config()
     today = datetime.now(BEIJING_TZ).strftime("%Y%m%d")
     if already_published_today(repo, today):
+        if not _digest_exists(repo, today):
+            print("MISSING_TODAY_DIGEST rebuilding")
+            _publish_digest(repo, today)
         return 0
 
     queue = load_queue(repo)
@@ -302,9 +305,16 @@ def main(refresh: bool = True) -> int:
         candidate = choose_candidate(queue, existing_ids, attempted)
         if candidate is None:
             save_queue(repo, queue or merge_queue({}, [], config))
-            upsert_unavailable_fulltext_issue(repo, today, unavailable_fulltext)
+            all_link_only = [
+                item.copy()
+                for item in queue.get("items") or []
+                if item.get("status") == "link_only"
+            ]
             if processing_failures:
                 raise RuntimeError("paper processing failed: " + " | ".join(processing_failures))
+            failed_items = [_failed_item(item) for item in all_link_only]
+            stats_path = _write_stats(today, len(all_link_only), [], failed_items)
+            _publish_digest(repo, today, stats_path)
             if failures:
                 print("NO_PROCESSABLE_FULLTEXT " + " | ".join(failures))
                 return 0
@@ -343,7 +353,6 @@ def main(refresh: bool = True) -> int:
         print(f"SKIP_FAILED {failure}")
         save_queue(repo, queue)
 
-    upsert_unavailable_fulltext_issue(repo, today, unavailable_fulltext)
     candidate["status"] = "published"
     candidate["issue_number"] = result.number
     candidate["published_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -354,31 +363,16 @@ def main(refresh: bool = True) -> int:
     save_index(repo, index)
     save_queue(repo, queue)
     time.sleep(4)
-    stats_path = CONFIG.memory_dir / f"top_venue_stats_{today}.json"
-    stats_path.parent.mkdir(parents=True, exist_ok=True)
-    stats_path.write_text(
-        json.dumps(
-            {
-                "date": today,
-                "candidate_count": 1,
-                "llm_selected_count": 1,
-                "successful_selected_arxiv_ids": [candidate["arxiv_id"]] if candidate.get("arxiv_id") else [],
-                "successful_issue_numbers": [result.number],
-                "failed_items": [],
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
+    successful_arxiv_ids = [candidate["arxiv_id"]] if candidate.get("arxiv_id") else []
+    failed_items = [_failed_item(item) for item in unavailable_fulltext]
+    stats_path = _write_stats(
+        today,
+        1 + len(unavailable_fulltext),
+        [result.number],
+        failed_items,
+        successful_arxiv_ids,
     )
-    daily_digest_llm_upgrade.main(target_date=today, stats_json=str(stats_path))
-    for attempt in range(3):
-        sync_daily_reports_to_repo.main()
-        try:
-            repo.get_contents(f"daily_reports/{today[:6]}/{today}.md")
-            break
-        except Exception:
-            if attempt < 2:
-                time.sleep(6)
+    _publish_digest(repo, today, stats_path)
     print(f"PUBLISHED issue=#{result.number}")
     return 0
 

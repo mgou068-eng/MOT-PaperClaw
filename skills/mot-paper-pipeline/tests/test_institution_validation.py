@@ -46,6 +46,28 @@ class InstitutionValidationTest(unittest.TestCase):
         self.assertIn("最终纳入日报 0 篇", digest)
         self.assertIn("当日未检索到符合条件并纳入日报的论文", digest)
 
+    def test_empty_digest_lists_doi_and_pdf_for_unavailable_fulltext(self):
+        digest = build_digest_with_llm(
+            "20260813",
+            [],
+            stats={"candidate_count": 1, "llm_selected_count": 1},
+            failed_items=[
+                {
+                    "title": "Blocked MOT Paper",
+                    "venue": "AAAI",
+                    "doi": "10.1609/example",
+                    "source_url": "https://example.test/source",
+                    "pdf_url": "https://example.test/paper.pdf",
+                    "error": "公开 PDF 暂不可获取",
+                }
+            ],
+        )
+
+        self.assertIn("最终纳入日报 0 篇", digest)
+        self.assertIn("[DOI](https://doi.org/10.1609/example)", digest)
+        self.assertIn("[公开 PDF](https://example.test/paper.pdf)", digest)
+        self.assertIn("公开 PDF 暂不可获取", digest)
+
     def test_extracts_icml_affiliations_from_source(self):
         tex = r"""
         \begin{icmlauthorlist}
