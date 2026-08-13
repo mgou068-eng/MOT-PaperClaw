@@ -2,6 +2,36 @@
 
 最近三天日报（最新在前）：
 
+# [20260813](./202608/20260813.md)
+## 📌 今日概况
+
+今日共检索候选论文 4 篇；关键词+LLM 智能匹配 MOT 论文 4 篇；最终纳入日报 0 篇。
+
+当日筛中论文均未通过处理或质检，未纳入日报。
+
+
+## ⚠️ 未纳入日报的匹配论文
+
+以下论文通过筛选，但因全文不可用或处理失败而未纳入深度解读。可通过来源链接查看原始记录。
+
+| 标题 | Venue | 来源链接 | 未纳入原因 |
+|------|-------|----------|------------|
+| GLoMOT: Efficient Online GNN-based Low-Frame-Rate Multi-Object Tracker | AAAI | [DOI](https://doi.org/10.1609/aaai.v40i6.42500) · [Semantic Scholar](https://www.semanticscholar.org/paper/4214e29359f18099ac9db29918a4843200f91613) · [公开 PDF](https://doi.org/10.1609/aaai.v40i6.42500) | PDF 下载失败 |
+| SAM2-OV: A Novel Detection-Only Tuning Paradigm for Open-Vocabulary Multi-Object Tracking | AAAI | [DOI](https://doi.org/10.1609/aaai.v40i4.37301) · [Semantic Scholar](https://www.semanticscholar.org/paper/bfdcfcc11a8a1b76c7344c72a9aa598887ac485b) · [公开 PDF](https://ojs.aaai.org/index.php/AAAI/article/download/37301/41263) | PDF 下载失败 |
+| Robust Exemplar Prompt Learning via Bi-directional Visual-Semantic Alignment for Multi-Object Tracking | ICMR | [DOI](https://doi.org/10.1145/3805622.3810875) · [Semantic Scholar](https://www.semanticscholar.org/paper/1cd352823d7afe371c17656e18a828cab99edc18) · [公开 PDF](https://doi.org/10.1145/3805622.3810875) | PDF 下载失败 |
+| SGFR-Track: Uncertainty-Gated Spectral Feature Restoration for Online Multi-Object Tracking | ICMR | [DOI](https://doi.org/10.1145/3805622.3810848) · [Semantic Scholar](https://www.semanticscholar.org/paper/6de7f8a500768c6b85e4f1764c0c0bf0f51bc83e) · [公开 PDF](https://doi.org/10.1145/3805622.3810848) | PDF 下载失败 |
+
+## 🔎 观察
+
+- 当日候选符合 MOT 与 venue 条件，但没有可供可靠深度解读的全文。
+- 系统已保留来源链接，等待开放 PDF、arXiv 版本或后续人工补充全文。
+
+---
+
+Powered by OpenClaw🦞
+
+---
+
 # [20260812](./202608/20260812.md)
 ## 📌 今日概况
 
@@ -55,24 +85,6 @@ Powered by OpenClaw🦞
 
 - 当前工作侧重关联策略创新，而非数据集或指标突破，反映跟踪研究向精细化模块设计倾斜
 - 混合关联范式可能成为应对密集遮挡场景的新趋势，但需更多实验验证其泛化性
-
----
-
-Powered by OpenClaw🦞
-
----
-
-# [20260809](./202608/20260809.md)
-## 📌 今日概况
-
-今日共检索候选论文 0 篇；关键词+LLM 智能匹配 MOT 论文 0 篇；最终纳入日报 0 篇。
-
-当日未检索到符合条件并纳入日报的论文。
-
-## 🔎 观察
-
-- 当日无成功纳入论文，建议优先检查候选筛选结果与失败原因。
-- 若连续出现空日报，应复核 arXiv 日期窗口、关键词配置与 LLM 筛选输出。
 
 ---
 
