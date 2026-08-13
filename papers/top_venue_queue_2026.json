@@ -15,7 +15,7 @@
     "PR",
     "ACM MM"
   ],
-  "updated_at": "2026-08-13T02:20:54+00:00",
+  "updated_at": "2026-08-13T02:51:10+00:00",
   "items": [
     {
       "candidate_id": "doi:10.1609/aaai.v40i6.42500",
@@ -30,7 +30,8 @@
       "semantic_scholar_url": "https://www.semanticscholar.org/paper/4214e29359f18099ac9db29918a4843200f91613",
       "citation_count": 0,
       "status": "link_only",
-      "last_error": "PDF 下载失败"
+      "last_error": "PDF 下载失败",
+      "failed_on": "20260813"
     },
     {
       "candidate_id": "doi:10.1609/aaai.v40i4.37301",
@@ -45,7 +46,8 @@
       "semantic_scholar_url": "https://www.semanticscholar.org/paper/bfdcfcc11a8a1b76c7344c72a9aa598887ac485b",
       "citation_count": 0,
       "status": "link_only",
-      "last_error": "PDF 下载失败"
+      "last_error": "PDF 下载失败",
+      "failed_on": "20260813"
     },
     {
       "candidate_id": "doi:10.1016/j.patcog.2026.114038",
@@ -76,7 +78,8 @@
       "semantic_scholar_url": "https://www.semanticscholar.org/paper/1cd352823d7afe371c17656e18a828cab99edc18",
       "citation_count": 0,
       "status": "link_only",
-      "last_error": "PDF 下载失败"
+      "last_error": "PDF 下载失败",
+      "failed_on": "20260813"
     },
     {
       "candidate_id": "doi:10.1145/3805622.3810848",
@@ -91,7 +94,8 @@
       "semantic_scholar_url": "https://www.semanticscholar.org/paper/6de7f8a500768c6b85e4f1764c0c0bf0f51bc83e",
       "citation_count": 0,
       "status": "link_only",
-      "last_error": "PDF 下载失败"
+      "last_error": "PDF 下载失败",
+      "failed_on": "20260813"
     }
   ]
 }
