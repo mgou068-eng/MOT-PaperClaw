@@ -25,7 +25,7 @@ on:
         type: string
 
 concurrency:
-  group: mot-pipeline-manual
+  group: mot-pipeline-write
   cancel-in-progress: false
 
 jobs:

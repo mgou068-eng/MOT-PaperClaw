@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import time
 
 from pipeline_config import load_config
 
@@ -42,19 +43,47 @@ def load_existing_arxiv_ids(repo) -> set[str]:
     return set(index.keys())
 
 
-def upsert_repo_file(repo, path: str, content: str, message: str) -> None:
+def _github_status(exc: Exception) -> int | None:
+    status = getattr(exc, "status", None)
+    if isinstance(status, int):
+        return status
+    response = getattr(exc, "response", None)
+    response_status = getattr(response, "status_code", None)
+    return response_status if isinstance(response_status, int) else None
+
+
+def upsert_repo_file(repo, path: str, content: str, message: str, retries: int = 4) -> None:
     data = content.encode("utf-8")
-    try:
-        existing = repo.get_contents(path)
+    for attempt in range(retries):
+        try:
+            existing = repo.get_contents(path)
+        except Exception as exc:
+            if _github_status(exc) != 404:
+                raise
+            try:
+                repo.create_file(path=path, message=message, content=data)
+                print(f"CREATED {path}")
+                return
+            except Exception as create_exc:
+                if _github_status(create_exc) not in {409, 422} or attempt == retries - 1:
+                    raise
+                time.sleep(attempt + 1)
+                continue
+
         existing_text = existing.decoded_content.decode("utf-8")
         if existing_text == content:
             print(f"UNCHANGED {path}")
             return
-        repo.update_file(path=path, message=message, content=data, sha=existing.sha)
-        print(f"UPDATED {path}")
-    except Exception:
-        repo.create_file(path=path, message=message, content=data)
-        print(f"CREATED {path}")
+        try:
+            repo.update_file(path=path, message=message, content=data, sha=existing.sha)
+            print(f"UPDATED {path}")
+            return
+        except Exception as exc:
+            if _github_status(exc) not in {409, 422} or attempt == retries - 1:
+                raise
+            time.sleep(attempt + 1)
+
+    raise RuntimeError(f"failed to update {path} after {retries} attempts")
 
 
 def cleanup_legacy_daily_reports(repo, base_dir: str = "daily_reports") -> None:
