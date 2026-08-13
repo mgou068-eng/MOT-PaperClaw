@@ -33,6 +33,13 @@ jobs:
       PYTHONUNBUFFERED: "1"
 
     steps:
+      - name: Print schedule diagnostics
+        run: |
+          echo "event=${{ github.event_name }}"
+          echo "configured_schedule=01:30 UTC / 09:30 Asia/Shanghai"
+          echo "runner_started_utc=$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "runner_started_beijing=$(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S %Z')"
+
       - name: Checkout (sparse)
         uses: actions/checkout@v6
         with:

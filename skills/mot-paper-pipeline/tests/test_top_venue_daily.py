@@ -12,12 +12,13 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from top_venue_daily import (
     already_published_today,
+    build_unavailable_fulltext_report,
     canonical_venue,
     choose_candidate,
     extract_arxiv_id,
     is_mot_candidate,
 )
-from paper_processor import _download_public_pdf, _extract_pdf_links
+from paper_processor import _curl_fetch, _download_public_pdf, _extract_pdf_links
 
 
 VENUES = {
@@ -97,6 +98,18 @@ class TopVenueDailyTest(unittest.TestCase):
         chosen = choose_candidate(queue, set(), {"doi:first"})
         self.assertEqual(chosen["candidate_id"], "doi:second")
 
+    def test_skips_link_only_candidate_on_later_runs(self):
+        queue = {
+            "items": [
+                {"candidate_id": "doi:blocked", "status": "link_only"},
+                {"candidate_id": "doi:available", "status": "pending"},
+            ]
+        }
+
+        chosen = choose_candidate(queue, set())
+
+        self.assertEqual(chosen["candidate_id"], "doi:available")
+
     def test_extracts_ojs_pdf_link(self):
         html = b'<a href="https://ojs.aaai.org/index.php/AAAI/article/view/42500/46461">PDF</a>'
         self.assertEqual(
@@ -116,6 +129,36 @@ class TopVenueDailyTest(unittest.TestCase):
         self.assertIsNotNone(path)
         self.assertEqual(resolved, "https://example.test/paper.pdf")
         path.unlink()
+
+    @patch("paper_processor.subprocess.run")
+    def test_curl_download_forces_http_1_1(self, run):
+        run.return_value.stdout = b"%PDF-1.7\nexample\nhttps://example.test/paper.pdf"
+        data, resolved = _curl_fetch("https://example.test/paper.pdf")
+
+        command = run.call_args.args[0]
+        self.assertIn("--http1.1", command)
+        self.assertEqual(data, b"%PDF-1.7\nexample")
+        self.assertEqual(resolved, "https://example.test/paper.pdf")
+
+    def test_builds_link_only_report_without_claiming_analysis(self):
+        report = build_unavailable_fulltext_report(
+            "20260813",
+            [
+                {
+                    "title": "A MOT Paper",
+                    "venue": "AAAI",
+                    "year": 2026,
+                    "doi": "10.1609/test",
+                    "semantic_scholar_url": "https://example.test/paper",
+                    "pdf_url": "https://example.test/paper.pdf",
+                }
+            ],
+        )
+
+        self.assertIn("[DOI](https://doi.org/10.1609/test)", report)
+        self.assertIn("[公开 PDF](https://example.test/paper.pdf)", report)
+        self.assertIn("未解读", report)
+        self.assertIn("`link_only`", report)
 
     def test_detects_top_venue_paper_already_published_today(self):
         class Repo:

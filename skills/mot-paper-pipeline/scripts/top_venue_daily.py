@@ -213,6 +213,63 @@ def already_published_today(repo, date_str: str) -> bool:
     return False
 
 
+def _markdown_cell(value: object) -> str:
+    return re.sub(r"\s+", " ", str(value or "-")).replace("|", "\\|").strip()
+
+
+def build_unavailable_fulltext_report(date_str: str, candidates: list[dict]) -> str:
+    lines = [
+        f"# MOT 全文待获取 {date_str}",
+        "",
+        "以下论文已通过 2026 顶会顶刊与 MOT 条件筛选，但 GitHub Runner 未能取得公开 PDF。",
+        "因此本次只保留来源链接，不生成摘要级的伪“全文解读”。",
+        "",
+        "| 论文 | Venue | 可用链接 | 状态 |",
+        "|---|---|---|---|",
+    ]
+    for item in candidates:
+        links: list[str] = []
+        doi = str(item.get("doi") or "").strip()
+        if doi:
+            links.append(f"[DOI](https://doi.org/{doi})")
+        source_url = str(item.get("semantic_scholar_url") or "").strip()
+        if source_url:
+            links.append(f"[Semantic Scholar]({source_url})")
+        pdf_url = str(item.get("pdf_url") or "").strip()
+        if pdf_url:
+            links.append(f"[公开 PDF]({pdf_url})")
+        lines.append(
+            "| {title} | {venue} {year} | {links} | 全文下载失败，未解读 |".format(
+                title=_markdown_cell(item.get("title")),
+                venue=_markdown_cell(item.get("venue")),
+                year=_markdown_cell(item.get("year")),
+                links=" · ".join(links) or "-",
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "> 这些条目在候选队列中标记为 `link_only`，后续定时任务不会重复下载；其链接仍可手动打开。",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def upsert_unavailable_fulltext_issue(repo, date_str: str, candidates: list[dict]):
+    if not candidates:
+        return None
+    title = f"MOT 全文待获取 {date_str}"
+    body = build_unavailable_fulltext_report(date_str, candidates)
+    for issue in repo.get_issues(state="open"):
+        if (issue.title or "").strip() == title:
+            issue.edit(title=title, body=body)
+            print(f"UPDATED_UNAVAILABLE_FULLTEXT issue=#{issue.number}")
+            return issue
+    issue = repo.create_issue(title=title, body=body)
+    print(f"CREATED_UNAVAILABLE_FULLTEXT issue=#{issue.number}")
+    return issue
+
+
 def main(refresh: bool = True) -> int:
     if not CONFIG.github_token:
         raise RuntimeError("Missing required environment variable: GITHUB_TOKEN")
@@ -237,14 +294,20 @@ def main(refresh: bool = True) -> int:
     existing_ids = load_existing_arxiv_ids(repo)
     attempted: set[str] = set()
     failures: list[str] = []
+    processing_failures: list[str] = []
+    unavailable_fulltext: list[dict] = []
     result = None
     candidate = None
     while True:
         candidate = choose_candidate(queue, existing_ids, attempted)
         if candidate is None:
             save_queue(repo, queue or merge_queue({}, [], config))
+            upsert_unavailable_fulltext_issue(repo, today, unavailable_fulltext)
+            if processing_failures:
+                raise RuntimeError("paper processing failed: " + " | ".join(processing_failures))
             if failures:
-                raise RuntimeError("all eligible papers failed: " + " | ".join(failures))
+                print("NO_PROCESSABLE_FULLTEXT " + " | ".join(failures))
+                return 0
             print("NO_ELIGIBLE_TOP_VENUE_PAPER")
             return 0
 
@@ -268,13 +331,19 @@ def main(refresh: bool = True) -> int:
         if result is not None:
             break
 
-        candidate["status"] = "retry"
+        is_download_failure = (error or "").startswith("PDF 下载失败")
+        candidate["status"] = "link_only" if is_download_failure else "retry"
         candidate["last_error"] = error or "unknown error"
+        if is_download_failure:
+            unavailable_fulltext.append(candidate.copy())
         failure = f"{candidate['candidate_id']}: {candidate['last_error']}"
         failures.append(failure)
+        if not is_download_failure:
+            processing_failures.append(failure)
         print(f"SKIP_FAILED {failure}")
         save_queue(repo, queue)
 
+    upsert_unavailable_fulltext_issue(repo, today, unavailable_fulltext)
     candidate["status"] = "published"
     candidate["issue_number"] = result.number
     candidate["published_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")

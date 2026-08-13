@@ -16,6 +16,8 @@ MOT-PaperClaw 从 [RS-PaperClaw](https://github.com/thinson/RS-PaperClaw) 改造
 
 候选必须满足：2026 年正式 venue 元数据、明确的 MOT 研究信号，以及可供全文处理的 arXiv ID 或来源核验的公开 PDF。候选队列持久化在 `papers/top_venue_queue_2026.json`；尚未公布论文列表或没有公开全文的 venue 不会用未核验预印本补位。
 
+公开 PDF 若被出版站点阻断，流水线会保留 DOI、来源页和 PDF 链接，将条目标记为 `link_only`，不以摘要冒充全文解读，也不会让当天任务因此失败。定时表达式为 `30 1 * * *`，即北京时间每天 09:30；实际启动可能因 GitHub Actions 排队稍有延迟，运行日志会打印计划时间和 Runner 实际启动时间。
+
 手动运行：
 
 ```bash
