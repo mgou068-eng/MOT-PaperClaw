@@ -44,7 +44,8 @@
       "doi": "10.1145/3805622.3810848",
       "semantic_scholar_url": "https://www.semanticscholar.org/paper/6de7f8a500768c6b85e4f1764c0c0bf0f51bc83e",
       "citation_count": 0,
-      "status": "pending"
+      "status": "retry",
+      "last_error": "PDF 下载失败"
     },
     {
       "candidate_id": "doi:10.1609/aaai.v40i6.42500",
